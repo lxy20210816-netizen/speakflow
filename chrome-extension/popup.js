@@ -309,7 +309,7 @@ class SpeakFlowApp {
                     this.updateStatus('正在生成AI语音...', 'loading');
                     
                     const speedValue = Math.max(0.25, Math.min(4.0, parseFloat(this.speedSlider.value)));
-                    const selectedVoice = this.voiceSelect.value || 'alloy';
+                    const selectedVoice = this.voiceSelect.value || 'shimmer'; // 默认使用最甜美的Shimmer音色
                     
                     // 生成语音
                     this.updateStatus('正在生成AI语音...', 'loading');
