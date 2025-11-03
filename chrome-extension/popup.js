@@ -561,25 +561,36 @@ class SpeakFlowApp {
         // 1. 停止popup中的AI语音（如果有）
         if (this.currentAudio) {
             console.log('stopAll: 停止popup中的AI语音');
-            this.currentAudio.pause();
-            this.currentAudio.currentTime = 0;
+            try {
+                this.currentAudio.pause();
+                this.currentAudio.currentTime = 0;
+                if (this.aiAudioData && this.aiAudioData.audioUrl) {
+                    URL.revokeObjectURL(this.aiAudioData.audioUrl);
+                }
+            } catch (e) {
+                console.warn('停止popup音频时出错:', e);
+            }
             this.currentAudio = null;
         }
         
-        // 2. 停止AI语音播放（通过offscreen和background）
+        // 2. 停止AI语音播放（通过offscreen和background）- 并行执行提高速度
         console.log('stopAll: 停止offscreen中的AI语音');
-        await new Promise((resolve) => {
+        const stopAIPromise = new Promise((resolve) => {
             chrome.runtime.sendMessage({ type: 'stopAudio' }, (response) => {
-                console.log('stopAll: 停止AI语音响应:', response);
+                if (chrome.runtime.lastError) {
+                    console.warn('stopAll: 停止AI语音消息发送失败:', chrome.runtime.lastError.message);
+                } else {
+                    console.log('stopAll: 停止AI语音响应:', response);
+                }
                 resolve();
             });
             // 超时保护
-            setTimeout(resolve, 300);
+            setTimeout(resolve, 500);
         });
         
-        // 3. 停止Chrome TTS播放
+        // 3. 停止Chrome TTS播放 - 并行执行
         console.log('stopAll: 停止Chrome TTS');
-        await new Promise((resolve) => {
+        const stopTTSPromise = new Promise((resolve) => {
             chrome.runtime.sendMessage({ type: 'stop' }, (response) => {
                 if (chrome.runtime.lastError) {
                     console.warn('stopAll: 停止Chrome TTS消息发送失败:', chrome.runtime.lastError.message);
@@ -589,8 +600,11 @@ class SpeakFlowApp {
                 resolve();
             });
             // 超时保护
-            setTimeout(resolve, 300);
+            setTimeout(resolve, 500);
         });
+        
+        // 等待所有停止操作完成
+        await Promise.all([stopAIPromise, stopTTSPromise]);
         
         // 4. 清理所有状态
         this.aiAudioLooping = false;
@@ -600,13 +614,52 @@ class SpeakFlowApp {
         console.log('stopAll: 所有音频已停止');
     }
     
-    stop() {
+    async stop() {
         // 用户手动停止播放
-        this.stopAll().then(() => {
+        console.log('用户点击停止按钮');
+        
+        // 立即更新UI状态，提供即时反馈
+        this.playBtn.disabled = false;
+        this.stopBtn.disabled = true;
+        this.updateStatus('正在停止...', 'loading');
+        
+        try {
+            // 停止所有正在播放的音频（包括后台播放）
+            await this.stopAll();
+            
+            // 再次确认状态（检查后台是否真的停止了）
+            await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'getStatus' }, (response) => {
+                    if (response) {
+                        console.log('停止后状态检查:', response);
+                        if (response.isPlaying) {
+                            // 如果后台还在播放，再次尝试停止
+                            console.warn('后台仍在播放，再次尝试停止');
+                            this.stopAll().then(resolve);
+                        } else {
+                            resolve();
+                        }
+                    } else {
+                        resolve();
+                    }
+                });
+                setTimeout(resolve, 500); // 超时保护
+            });
+            
+            // 更新UI
+            this.isPlaying = false;
             this.playBtn.disabled = false;
             this.stopBtn.disabled = true;
             this.updateStatus('已停止播放', 'success');
-        });
+            console.log('停止操作完成');
+        } catch (error) {
+            console.error('停止操作出错:', error);
+            this.updateStatus('停止时出错', 'error');
+            // 即使出错也更新UI状态
+            this.isPlaying = false;
+            this.playBtn.disabled = false;
+            this.stopBtn.disabled = true;
+        }
     }
 
     updateStatus(message, type = '') {
