@@ -5,7 +5,11 @@
   "description": "专为语言学习者设计的影子跟读练习工具，支持多语言、多音色、倍速播放和循环练习",
   "permissions": [
     "tts",
-    "storage"
+    "storage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"

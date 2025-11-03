@@ -42,6 +42,26 @@
         </div>
 
         <div class="section">
+            <label class="checkbox-label" style="margin-bottom: 10px;">
+                <input type="checkbox" id="use-ai-voice">
+                <span>使用AI语音（OpenAI TTS，类似ChatGPT）</span>
+            </label>
+            <div id="ai-voice-settings" style="display: none; margin-left: 24px; margin-top: 8px;">
+                <label for="openai-api-key" style="font-size: 12px;">OpenAI API Key:</label>
+                <input 
+                    type="password" 
+                    id="openai-api-key" 
+                    placeholder="sk-..." 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;"
+                >
+                <p style="font-size: 11px; color: #666; margin-top: 4px;">
+                    💡 获取API Key: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #667eea;">前往OpenAI平台</a><br>
+                    ⚠️ API Key仅存储在本地，不会上传到服务器
+                </p>
+            </div>
+        </div>
+
+        <div class="section" id="voice-section">
             <label for="voice-select">选择音色：</label>
             <select id="voice-select">
                 <option value="">自动选择</option>
@@ -74,12 +94,16 @@
         </div>
         
         <div class="tip-section">
-            <p class="tip-text">
-                💡 提示：如需更高质量的语音，推荐使用Python桌面版本
+            <p class="tip-text" id="tip-text">
+                💡 提示：使用AI语音可获得更自然、更高质量的语音效果
+            </p>
+            <p class="tip-text" id="ai-tip-text" style="display: none; color: #ff9800; font-weight: 600; margin-top: 5px;">
+                ⚠️ AI语音需要在弹窗打开时播放。如需后台播放，请使用Chrome TTS。
             </p>
         </div>
     </div>
 
+    <script src="openai-tts-helper.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

@@ -15,6 +15,8 @@ class BackgroundTTSPlayer {
         this.heartbeatInterval = null;
         this.ttsEventHandler = null;
         this.loopCount = 0;
+        this.currentAudio = null; // 用于存储当前播放的Audio对象
+        this.isAudioMode = false; // 标记是否使用音频播放模式
         
         // 监听来自popup的消息
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -100,8 +102,60 @@ class BackgroundTTSPlayer {
                     response = { success: true };
                     break;
                     
+                case 'playAudio':
+                    // AI语音现在通过offscreen播放，这里转发消息
+                    try {
+                        console.log('Background: 转发消息到offscreen, base64Audio长度:', message.base64Audio?.length);
+                        // 转发到offscreen文档
+                        chrome.runtime.sendMessage({
+                            type: 'playAudio',
+                            base64Audio: message.base64Audio,
+                            shouldLoop: message.shouldLoop
+                        }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Background: 转发到offscreen失败:', chrome.runtime.lastError.message);
+                            } else {
+                                console.log('Background: offscreen响应:', response);
+                            }
+                        });
+                        response = { success: true };
+                    } catch (error) {
+                        console.error('Background: playAudio消息处理异常:', error);
+                        response = { success: false, error: error.message || '播放失败' };
+                    }
+                    break;
+                    
+                case 'stopAudio':
+                    // 停止AI语音（转发到offscreen）
+                    try {
+                        chrome.runtime.sendMessage({ type: 'stopAudio' }, (offscreenResponse) => {
+                            if (chrome.runtime.lastError) {
+                                console.warn('Background: 停止offscreen音频失败（可能文档不存在）:', chrome.runtime.lastError.message);
+                            } else {
+                                console.log('Background: Offscreen音频已停止');
+                            }
+                        });
+                        response = { success: true };
+                    } catch (error) {
+                        console.error('Background: stopAudio异常:', error);
+                        response = { success: true }; // 即使失败也返回成功，避免阻塞
+                    }
+                    break;
+                    
                 case 'stop':
                     this.stop();
+                    // 同时停止offscreen的播放
+                    try {
+                        chrome.runtime.sendMessage({ type: 'stopAudio' }, (offscreenResponse) => {
+                            if (chrome.runtime.lastError) {
+                                console.warn('Background: 停止offscreen音频失败（可能文档不存在）:', chrome.runtime.lastError.message);
+                            } else {
+                                console.log('Background: Offscreen音频已停止');
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Background: stop时停止offscreen异常:', error);
+                    }
                     response = { success: true };
                     break;
                     
@@ -111,6 +165,19 @@ class BackgroundTTSPlayer {
                         shouldLoop: this.shouldLoop 
                     };
                     break;
+                    
+                case 'checkAIAudioStatus':
+                    // 检查AI音频播放状态（通过发送消息到offscreen检查）
+                    chrome.runtime.sendMessage({ type: 'getAudioStatus' }, (offscreenResponse) => {
+                        if (sendResponse) {
+                            if (offscreenResponse && offscreenResponse.isPlaying) {
+                                sendResponse({ isPlaying: true });
+                            } else {
+                                sendResponse({ isPlaying: false });
+                            }
+                        }
+                    });
+                    return true; // 异步响应
                     
                 default:
                     response = { success: false, error: 'Unknown message type' };
@@ -404,7 +471,11 @@ class BackgroundTTSPlayer {
                 // 如果已经播放超过估算时长的80%，认为播放已完成
                 if (elapsed >= this.estimatedDuration * 0.8) {
                     console.log('Background: 判定播放已完成，触发循环');
-                    this.handlePlaybackEnd();
+                    if (this.isAudioMode) {
+                        this.handleAudioPlaybackEnd();
+                    } else {
+                        this.handlePlaybackEnd();
+                    }
                 } else {
                     // 继续等待
                     console.log('Background: 播放时间未到，继续保护');
@@ -478,6 +549,138 @@ class BackgroundTTSPlayer {
         }
     }
     
+    playAudio(base64AudioData, shouldLoop, estimatedDuration) {
+        console.log('Background: 开始播放音频（AI语音）');
+        console.log('Background: Base64数据长度:', base64AudioData ? base64AudioData.length : 0);
+        
+        if (!base64AudioData) {
+            console.error('Background: 音频数据为空');
+            return;
+        }
+        
+        try {
+            this.stop();
+            
+            this.isPlaying = true;
+            this.shouldLoop = shouldLoop;
+            this.isAudioMode = true;
+            this.loopCount = 0;
+            
+            // 将base64转换为Blob
+            console.log('Background: 开始解码base64数据...');
+            const binaryString = atob(base64AudioData);
+            console.log('Background: Base64解码完成，二进制长度:', binaryString.length);
+            
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+            console.log('Background: Blob创建完成，大小:', audioBlob.size, 'bytes');
+            const audioUrl = URL.createObjectURL(audioBlob);
+            console.log('Background: Audio URL创建完成:', audioUrl.substring(0, 50) + '...');
+            
+            // 保存原始base64数据用于循环
+            const savedAudioData = base64AudioData;
+            
+            // 创建Audio对象
+            const audio = new Audio(audioUrl);
+            this.currentAudio = audio;
+            
+            // 估算播放时长
+            this.estimatedDuration = estimatedDuration || 5;
+            this.playbackStartTime = Date.now();
+            
+            // 播放结束事件
+            audio.onended = () => {
+                console.log('Background: 音频播放结束');
+                URL.revokeObjectURL(audioUrl);
+                this.handleAudioPlaybackEnd();
+            };
+            
+            // 错误处理
+            audio.onerror = (error) => {
+                console.error('Background: 音频播放错误:', error);
+                console.error('Background: 音频错误详情:', audio.error);
+                URL.revokeObjectURL(audioUrl);
+                this.isPlaying = false;
+                this.shouldLoop = false;
+                this.stopLoopProtection();
+            };
+            
+            // 可以播放事件
+            audio.oncanplay = () => {
+                console.log('Background: 音频可以播放');
+            };
+            
+            // 加载错误
+            audio.onloadstart = () => {
+                console.log('Background: 音频开始加载');
+            };
+            
+            // 开始播放
+            console.log('Background: 尝试播放音频...');
+            audio.play().then(() => {
+                console.log('Background: 音频播放已开始');
+                this.keepAlive();
+                this.startLoopProtection();
+            }).catch((error) => {
+                console.error('Background: 音频播放失败:', error);
+                console.error('Background: 错误名称:', error.name);
+                console.error('Background: 错误消息:', error.message);
+                URL.revokeObjectURL(audioUrl);
+                this.isPlaying = false;
+                this.shouldLoop = false;
+                this.stopLoopProtection();
+            });
+            
+            // 保存当前播放信息（用于循环）
+            this.currentUtterance = {
+                audioData: savedAudioData,
+                shouldLoop: shouldLoop,
+                estimatedDuration: estimatedDuration
+            };
+        } catch (error) {
+            console.error('Background: playAudio异常:', error);
+            console.error('Background: 异常堆栈:', error.stack);
+            this.isPlaying = false;
+            this.shouldLoop = false;
+            this.stopLoopProtection();
+        }
+    }
+    
+    handleAudioPlaybackEnd() {
+        console.log('Background: handleAudioPlaybackEnd 被调用，isPlaying:', this.isPlaying, 'shouldLoop:', this.shouldLoop);
+        
+        if (!this.isPlaying) {
+            return;
+        }
+        
+        this.keepAlive();
+        
+        if (this.shouldLoop && this.currentUtterance && this.currentUtterance.audioData) {
+            console.log('Background: 准备循环播放音频');
+            
+            const shouldLoop = this.shouldLoop;
+            const audioData = this.currentUtterance.audioData;
+            const estimatedDuration = this.currentUtterance.estimatedDuration;
+            
+            setTimeout(() => {
+                if (this.isPlaying && shouldLoop && audioData) {
+                    this.loopCount = (this.loopCount || 0) + 1;
+                    console.log('Background: 开始循环播放音频（第', this.loopCount, '次）');
+                    this.playAudio(audioData, shouldLoop, estimatedDuration);
+                }
+            }, 300);
+        } else {
+            console.log('Background: 音频单次播放完成');
+            this.isPlaying = false;
+            this.loopCount = 0;
+            this.stopLoopProtection();
+        }
+    }
+    
     stop() {
         console.log('Background: 停止播放');
         this.isPlaying = false;
@@ -486,10 +689,19 @@ class BackgroundTTSPlayer {
         this.stopFallbackCheck();
         this.stopLoopProtection();
         
+        // 停止TTS
         if (chrome.tts) {
             chrome.tts.stop();
         }
         
+        // 停止音频播放
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+            this.currentAudio = null;
+        }
+        
+        this.isAudioMode = false;
         this.currentUtterance = null;
         
         chrome.storage.local.remove([
