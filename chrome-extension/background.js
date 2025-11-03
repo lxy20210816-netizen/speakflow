@@ -17,6 +17,7 @@ class BackgroundTTSPlayer {
         this.loopCount = 0;
         this.currentAudio = null; // 用于存储当前播放的Audio对象
         this.isAudioMode = false; // 标记是否使用音频播放模式
+        this.isHandlingPlaybackEnd = false; // 防止重复处理播放结束事件
         
         // 监听来自popup的消息
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -365,12 +366,22 @@ class BackgroundTTSPlayer {
         console.log('Background: 当前状态 - isPlaying:', this.isPlaying, 'shouldLoop:', this.shouldLoop, 'loopCount:', this.loopCount);
         console.log('Background: currentUtterance存在:', !!this.currentUtterance);
         
+        // 防止重复调用：检查是否正在处理结束事件
+        if (this.isHandlingPlaybackEnd) {
+            console.log('Background: 正在处理播放结束事件，跳过重复调用');
+            return;
+        }
+        
+        // 标记正在处理
+        this.isHandlingPlaybackEnd = true;
+        
         // 先保存当前状态（防止在setTimeout期间被修改）
         const shouldLoop = this.shouldLoop;
         const utterance = this.currentUtterance;
         
         if (!this.isPlaying) {
             console.log('Background: 播放已停止，退出循环');
+            this.isHandlingPlaybackEnd = false;
             return;
         }
         
@@ -440,9 +451,14 @@ class BackgroundTTSPlayer {
             };
             
             // 延迟执行
-            setTimeout(doLoop, 300);
+            setTimeout(() => {
+                // 清除处理标记（延迟后清除，允许下一次循环）
+                this.isHandlingPlaybackEnd = false;
+                doLoop();
+            }, 300);
         } else {
             console.log('Background: ✗ 单次播放完成（shouldLoop=' + shouldLoop + ', utterance=' + !!utterance + '）');
+            this.isHandlingPlaybackEnd = false;
             this.isPlaying = false;
             this.loopCount = 0;
             this.stopLoopProtection();
