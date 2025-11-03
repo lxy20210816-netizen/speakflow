@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "SpeakFlow - 影子跟读学习工具",
+  "version": "1.0.0",
+  "description": "专为语言学习者设计的影子跟读练习工具，支持多语言、多音色、倍速播放和循环练习",
+  "permissions": [
+    "tts",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
+
