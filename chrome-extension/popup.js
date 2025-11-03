@@ -12,6 +12,9 @@ class SpeakFlowApp {
         
         this.initElements();
         this.initEvents();
+        // 初始化按钮状态
+        this.playBtn.disabled = false;
+        this.stopBtn.disabled = true;
         this.loadVoices();
         this.loadSavedSettings();
         this.checkPlaybackStatus();
