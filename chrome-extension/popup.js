@@ -173,12 +173,12 @@ class SpeakFlowApp {
     
     loadAIVoices() {
         const voices = this.openaiTTS.getVoices();
-        this.voiceSelect.innerHTML = '<option value="">自动选择</option>';
+        this.voiceSelect.innerHTML = '<option value="">自动选择（推荐：Shimmer最甜美）</option>';
         
         voices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.id;
-            option.textContent = voice.name + ' (' + voice.gender + ')';
+            option.textContent = voice.name;
             this.voiceSelect.appendChild(option);
         });
         
