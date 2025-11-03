@@ -46,20 +46,20 @@ class OpenAITTSHelper {
         const voices = this.getVoices();
         const lang = langCode.toLowerCase();
         
-        // 默认推荐Shimmer（最甜美女性音色）
+        // 默认推荐Nova（女性音色）
         // 根据语言推荐合适的语音
         if (lang.startsWith('zh')) {
-            // 中文推荐Shimmer（最甜美）
-            return voices.find(v => v.id === 'shimmer') || voices[0];
+            // 中文推荐Nova
+            return voices.find(v => v.id === 'nova') || voices[0];
         } else if (lang.startsWith('ja')) {
-            // 日语推荐Shimmer（最甜美）
-            return voices.find(v => v.id === 'shimmer') || voices[0];
+            // 日语推荐Nova
+            return voices.find(v => v.id === 'nova') || voices[0];
         } else if (lang.startsWith('ko')) {
-            // 韩语推荐Shimmer（最甜美）
-            return voices.find(v => v.id === 'shimmer') || voices[0];
+            // 韩语推荐Nova
+            return voices.find(v => v.id === 'nova') || voices[0];
         } else {
-            // 其他语言默认使用Shimmer（最甜美）
-            return voices.find(v => v.id === 'shimmer') || voices[0];
+            // 其他语言默认使用Nova
+            return voices.find(v => v.id === 'nova') || voices[0];
         }
     }
     
@@ -70,7 +70,7 @@ class OpenAITTSHelper {
             throw new Error('未设置OpenAI API Key。请在设置中输入您的API Key。');
         }
         
-        const voice = options.voice || 'shimmer'; // 默认使用最甜美的Shimmer音色
+        const voice = options.voice || 'nova'; // 默认使用Nova女性音色
         const model = options.model || 'tts-1'; // tts-1 或 tts-1-hd（更高质量但更慢）
         const speed = Math.max(0.25, Math.min(4.0, options.speed || 1.0)); // OpenAI支持0.25-4.0倍速
         

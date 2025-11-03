@@ -173,7 +173,7 @@ class SpeakFlowApp {
     
     loadAIVoices() {
         const voices = this.openaiTTS.getVoices();
-        this.voiceSelect.innerHTML = '<option value="">自动选择（推荐：Shimmer最甜美）</option>';
+        this.voiceSelect.innerHTML = '<option value="">自动选择（推荐：Nova）</option>';
         
         voices.forEach(voice => {
             const option = document.createElement('option');
@@ -309,7 +309,7 @@ class SpeakFlowApp {
                     this.updateStatus('正在生成AI语音...', 'loading');
                     
                     const speedValue = Math.max(0.25, Math.min(4.0, parseFloat(this.speedSlider.value)));
-                    const selectedVoice = this.voiceSelect.value || 'shimmer'; // 默认使用最甜美的Shimmer音色
+                    const selectedVoice = this.voiceSelect.value || 'nova'; // 默认使用Nova女性音色
                     
                     // 生成语音
                     this.updateStatus('正在生成AI语音...', 'loading');
