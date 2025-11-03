@@ -468,6 +468,13 @@ class BackgroundTTSPlayer {
                 const elapsed = (Date.now() - this.playbackStartTime) / 1000;
                 console.log('Background: 已播放', elapsed.toFixed(1), '秒，估算', this.estimatedDuration.toFixed(1), '秒');
                 
+                // 防止重复触发：如果正在处理播放结束，跳过
+                if (this.isHandlingPlaybackEnd) {
+                    console.log('Background: 正在处理播放结束，循环保护跳过');
+                    this.startLoopProtection(); // 继续保护
+                    return;
+                }
+                
                 // 如果已经播放超过估算时长的80%，认为播放已完成
                 if (elapsed >= this.estimatedDuration * 0.8) {
                     console.log('Background: 判定播放已完成，触发循环');
@@ -516,6 +523,12 @@ class BackgroundTTSPlayer {
                 const elapsed = (Date.now() - this.playbackStartTime) / 1000;
                 console.log('Background: 备用检查触发（已播放', elapsed.toFixed(1), '秒，估算', this.estimatedDuration.toFixed(1), '秒）');
                 console.log('Background: 备用检查 - isPlaying:', this.isPlaying, 'shouldLoop:', this.shouldLoop, 'currentUtterance:', !!this.currentUtterance);
+                
+                // 防止重复触发：如果正在处理播放结束，跳过
+                if (this.isHandlingPlaybackEnd) {
+                    console.log('Background: 正在处理播放结束，备用检查跳过');
+                    return;
+                }
                 
                 // 只有在超过估算时长50%以上，且没有收到end事件时，才触发备用检查
                 if (elapsed >= this.estimatedDuration * 0.8) {

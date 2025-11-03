@@ -121,37 +121,50 @@ function playAudio(base64Audio, shouldLoop) {
             stopAudio();
         };
         
-        // 开始播放
+        // 开始播放（只调用一次）
         console.log('Offscreen: 尝试播放音频...');
         console.log('Offscreen: 音频readyState:', audio.readyState);
         
-        audio.play().then(() => {
-            console.log('Offscreen: ✅ 音频播放已开始');
-            console.log('Offscreen: 音频时长:', audio.duration, '秒');
-            console.log('Offscreen: 是否循环:', audio.loop);
-            console.log('Offscreen: 音频是否暂停:', audio.paused);
-            console.log('Offscreen: 音频音量:', audio.volume);
-        }).catch((error) => {
-            console.error('Offscreen: ❌ 播放失败:', error);
-            console.error('Offscreen: 错误名称:', error.name);
-            console.error('Offscreen: 错误消息:', error.message);
-            
-            // 如果是自动播放被阻止，尝试使用Web Audio API作为备选
-            if (error.name === 'NotAllowedError' || error.message.includes('play')) {
-                console.log('Offscreen: 自动播放被阻止，尝试使用Web Audio API...');
-                playAudioWithWebAudio(bytes, shouldLoop);
-            } else {
-                URL.revokeObjectURL(audioUrl);
-                stopAudio();
+        // 统一的播放函数，避免重复调用
+        const startPlayback = () => {
+            if (!currentAudio || currentAudio !== audio) {
+                console.warn('Offscreen: 音频已更换，取消播放');
+                return;
             }
-        });
-        
-        // 如果音频已经加载好，确保播放
-        if (audio.readyState >= 2) {
-            console.log('Offscreen: 音频已准备好，确保正在播放');
-            audio.play().catch(err => {
-                console.warn('Offscreen: 再次尝试播放失败:', err);
+            
+            audio.play().then(() => {
+                console.log('Offscreen: ✅ 音频播放已开始');
+                console.log('Offscreen: 音频时长:', audio.duration, '秒');
+                console.log('Offscreen: 是否循环:', audio.loop);
+                console.log('Offscreen: 音频是否暂停:', audio.paused);
+                console.log('Offscreen: 音频音量:', audio.volume);
+            }).catch((error) => {
+                console.error('Offscreen: ❌ 播放失败:', error);
+                console.error('Offscreen: 错误名称:', error.name);
+                console.error('Offscreen: 错误消息:', error.message);
+                
+                // 如果是自动播放被阻止，尝试使用Web Audio API作为备选
+                if (error.name === 'NotAllowedError' || error.message.includes('play')) {
+                    console.log('Offscreen: 自动播放被阻止，尝试使用Web Audio API...');
+                    playAudioWithWebAudio(bytes, shouldLoop);
+                } else {
+                    URL.revokeObjectURL(audioUrl);
+                    stopAudio();
+                }
             });
+        };
+        
+        // 如果音频已经加载好，立即播放
+        if (audio.readyState >= 2) {
+            startPlayback();
+        } else {
+            // 等待音频加载完成
+            audio.addEventListener('canplay', startPlayback, { once: true });
+            audio.addEventListener('loadeddata', () => {
+                if (currentAudio === audio && audio.paused) {
+                    startPlayback();
+                }
+            }, { once: true });
         }
         
     } catch (error) {
