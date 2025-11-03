@@ -249,31 +249,45 @@ function playAudioFromUrl(audioUrl) {
 
 function stopAudio() {
     console.log('Offscreen: 停止播放');
+    console.log('Offscreen: 当前音频状态 - currentAudio:', currentAudio, 'isLooping:', isLooping);
+    
+    // 立即停止循环标记，防止重新开始播放
+    isLooping = false;
     
     if (currentAudio) {
         // 如果是Audio对象
         if (currentAudio.pause) {
+            console.log('Offscreen: 停止Audio对象');
             currentAudio.pause();
             currentAudio.currentTime = 0;
+            currentAudio.loop = false; // 明确取消循环
+            // 移除所有事件监听器
+            currentAudio.onended = null;
+            currentAudio.onerror = null;
             if (audioData && audioData.audioUrl) {
                 URL.revokeObjectURL(audioData.audioUrl);
             }
         } else {
             // 如果是Web Audio API的source
+            console.log('Offscreen: 停止Web Audio API source');
             try {
                 currentAudio.stop();
             } catch (e) {
                 // 忽略错误（可能已经停止）
+                console.warn('Offscreen: 停止Web Audio source时出错（可忽略）:', e);
             }
         }
         currentAudio = null;
     }
     
-    if (audioData && audioData.audioUrl) {
-        URL.revokeObjectURL(audioData.audioUrl);
+    // 清理音频数据
+    if (audioData) {
+        if (audioData.audioUrl) {
+            URL.revokeObjectURL(audioData.audioUrl);
+        }
+        audioData = null;
     }
     
-    isLooping = false;
-    audioData = null;
+    console.log('Offscreen: 播放已完全停止');
 }
 
