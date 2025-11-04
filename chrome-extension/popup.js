@@ -35,7 +35,7 @@ class SpeakFlowApp {
                         this.playBtn.disabled = this.isPlaying;
                         // 停止按钮始终可用，不根据播放状态禁用
                         if (this.isPlaying) {
-                            this.updateStatus('正在播放（后台运行）...', 'loading');
+                            this.updateStatus('正在播放', 'loading');
                         }
                     }
                 }
@@ -370,7 +370,6 @@ class SpeakFlowApp {
 
             this.voices = voices || [];
             this.filterVoicesByLanguage();
-            this.updateStatus(`已加载 ${this.voices.length} 个音色`, 'success');
             this.restoreSavedVoice();
         });
     }
@@ -544,7 +543,7 @@ class SpeakFlowApp {
                                 this.isPlaying = false;
                                 this.playBtn.disabled = false;
                             } else if (response && response.success) {
-                                this.updateStatus('正在播放（AI语音，后台运行）...', 'loading');
+                                this.updateStatus('正在播放', 'loading');
                                 this.isPlaying = true;
                                 this.playBtn.disabled = true;
                                 // 停止按钮始终可用
@@ -605,7 +604,7 @@ class SpeakFlowApp {
                             this.isPlaying = false;
                             this.playBtn.disabled = false;
                         } else if (response && response.success) {
-                            this.updateStatus('正在播放（后台运行）...', 'loading');
+                            this.updateStatus('正在播放', 'loading');
                             // Chrome TTS 立即开始播放
                             this.isPlaying = true;
                             this.playBtn.disabled = true;

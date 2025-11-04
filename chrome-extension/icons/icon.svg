@@ -1,8 +1,8 @@
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E85A00;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#002FA7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#001F8A;stop-opacity:1" />
     </linearGradient>
   </defs>
   
@@ -15,9 +15,9 @@
     <rect x="-20" y="-30" width="40" height="50" rx="20" fill="#FFFFFF"/>
     
     <!-- 麦克风内部装饰线条 -->
-    <line x1="-14" y1="-18" x2="14" y2="-18" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
-    <line x1="-14" y1="-6" x2="14" y2="-6" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
-    <line x1="-14" y1="6" x2="14" y2="6" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="-14" y1="-18" x2="14" y2="-18" stroke="#002FA7" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="-14" y1="-6" x2="14" y2="-6" stroke="#002FA7" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="-14" y1="6" x2="14" y2="6" stroke="#002FA7" stroke-width="2.5" stroke-linecap="round"/>
     
     <!-- 麦克风底座 -->
     <rect x="-12" y="20" width="24" height="10" rx="6" fill="#FFFFFF"/>
