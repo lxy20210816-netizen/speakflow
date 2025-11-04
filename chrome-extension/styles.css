@@ -251,3 +251,15 @@ select:focus {
     line-height: 1.4;
 }
 
+/* 日语假名注音样式 */
+ruby {
+    ruby-align: center;
+    ruby-overhang: auto;
+}
+
+ruby rt {
+    font-size: 0.7em;
+    color: #666;
+    padding: 0 1px;
+}
+

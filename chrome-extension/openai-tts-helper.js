@@ -145,11 +145,17 @@ class OpenAITTSHelper {
                             role: 'system',
                             content: `你是一个专业的语言学习助手。请分析用户提供的文本，并提供以下内容：
 1. 中文翻译：将文本翻译成${targetLanguage}
-2. 单词解释：提取文本中的重点单词（3-8个），每个单词需要包含：
+2. 如果输入文本是日语（包含汉字），请提供带假名注音的原文（furigana）：
+   - 必须对原文中的每一个汉字都标注假名注音
+   - 平假名和片假名不需要标注（因为本身就是假名）
+   - 使用HTML的ruby标签格式：<ruby>汉字<rt>假名</rt></ruby>
+   - 对于复合词，每个汉字都要单独标注，例如：<ruby>野<rt>の</rt></ruby><ruby>井<rt>い</rt></ruby><ruby>戸<rt>ど</rt></ruby>
+   - 保持原文的标点符号和空格
+3. 单词解释：提取文本中的重点单词（3-8个），每个单词需要包含：
    - 单词本身
    - 注音（日语用假名，英语用音标，其他语言用拼音或音标）
    - 中文解释
-3. 语法解释：提取文本中的重点语法点（2-5个），每个语法点需要包含：
+4. 语法解释：提取文本中的重点语法点（2-5个），每个语法点需要包含：
    - 语法点本身（只提取语法结构，不是整个句子，例如："〜てしまう"、"〜んです"、"〜んだっけ"等）
    - 语法点的详细解释（说明这个语法结构的用法、意义、语境、例句等）
 
@@ -158,6 +164,7 @@ class OpenAITTSHelper {
 请以JSON格式返回，格式如下：
 {
   "translation": "翻译文本",
+  "furigana": "带假名注音的原文（仅当输入是日语时提供，必须对所有汉字标注假名，使用HTML ruby标签）",
   "vocabulary": [
     {"word": "单词", "pronunciation": "注音", "explanation": "中文解释"}
   ],
@@ -167,6 +174,9 @@ class OpenAITTSHelper {
 }
 
 重要要求：
+- 如果输入是日语，furigana字段必须提供，必须对原文中的每一个汉字都使用ruby标签标注假名
+- ruby标签格式：<ruby>汉字<rt>假名</rt></ruby>，例如：<ruby>彼女<rt>かのじょ</rt></ruby><ruby>は<rt>は</rt></ruby><ruby>その<rt>その</rt></ruby><ruby>時<rt>とき</rt></ruby>
+- 平假名和片假名不需要用ruby标签包裹，直接显示即可
 - 对于日语单词，pronunciation必须是假名（平假名或片假名）
 - 对于英语单词，pronunciation必须是音标（使用IPA国际音标）
 - 语法解释必须提取语法结构（如助词、助动词、句型等），而不是解释整个句子
@@ -221,6 +231,7 @@ class OpenAITTSHelper {
             console.log('OpenAI翻译: 翻译成功');
             return {
                 translation: result.translation || '',
+                furigana: result.furigana || '',
                 vocabulary: result.vocabulary || [],
                 grammar: result.grammar || []
             };

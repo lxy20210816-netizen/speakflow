@@ -64,6 +64,8 @@ class SpeakFlowApp {
         this.voiceSection = document.getElementById('voice-section');
         this.translationSection = document.getElementById('translation-section');
         this.translationText = document.getElementById('translation-text');
+        this.furiganaSection = document.getElementById('furigana-section');
+        this.furiganaText = document.getElementById('furigana-text');
         this.vocabularySection = document.getElementById('vocabulary-section');
         this.vocabularyList = document.getElementById('vocabulary-list');
         this.grammarSection = document.getElementById('grammar-section');
@@ -211,6 +213,7 @@ class SpeakFlowApp {
         const dataToSave = {
             text: this.textInput.value.trim(),
             translation: translationData.translation,
+            furigana: translationData.furigana,
             vocabulary: translationData.vocabulary,
             grammar: translationData.grammar
         };
@@ -226,6 +229,14 @@ class SpeakFlowApp {
         // 显示翻译区域
         this.translationSection.style.display = 'block';
         this.translationText.textContent = translationData.translation || '';
+        
+        // 显示假名注音（如果是日语）
+        if (translationData.furigana) {
+            this.furiganaText.innerHTML = translationData.furigana;
+            this.furiganaSection.style.display = 'block';
+        } else {
+            this.furiganaSection.style.display = 'none';
+        }
         
         // 显示单词解释
         if (translationData.vocabulary && translationData.vocabulary.length > 0) {
@@ -792,6 +803,7 @@ class SpeakFlowApp {
             // 显示翻译区域并显示加载状态
             this.translationSection.style.display = 'block';
             this.translationText.textContent = '正在翻译...';
+            this.furiganaSection.style.display = 'none';
             this.vocabularySection.style.display = 'none';
             this.grammarSection.style.display = 'none';
             
@@ -803,6 +815,14 @@ class SpeakFlowApp {
             
             // 显示翻译结果
             this.translationText.textContent = result.translation || '翻译结果为空';
+            
+            // 显示假名注音（如果是日语）
+            if (result.furigana) {
+                this.furiganaText.innerHTML = result.furigana;
+                this.furiganaSection.style.display = 'block';
+            } else {
+                this.furiganaSection.style.display = 'none';
+            }
             
             // 显示单词解释（包含注音）
             if (result.vocabulary && result.vocabulary.length > 0) {
@@ -841,6 +861,7 @@ class SpeakFlowApp {
             console.error('翻译失败:', error);
             // 翻译失败时显示错误信息
             this.translationText.textContent = '翻译失败: ' + (error.message || '未知错误');
+            this.furiganaSection.style.display = 'none';
             this.vocabularySection.style.display = 'none';
             this.grammarSection.style.display = 'none';
         }
