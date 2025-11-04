@@ -450,12 +450,10 @@ class SpeakFlowApp {
         this.updateStatus('正在生成语音...', 'loading');
         this.saveSettings();
         
-        // 如果使用AI语音，先翻译文本（并行进行，不阻塞播放）
-        if (this.useAIVoice) {
-            this.translateText(text).catch(error => {
-                console.warn('翻译失败（不影响播放）:', error);
-            });
-        }
+        // 自动翻译文本（并行进行，不阻塞播放）
+        this.translateText(text).catch(error => {
+            console.warn('翻译失败（不影响播放）:', error);
+        });
 
         // 开始播放逻辑
         if (this.useAIVoice) {
