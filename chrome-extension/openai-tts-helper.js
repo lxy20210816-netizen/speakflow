@@ -121,6 +121,116 @@ class OpenAITTSHelper {
         }
     }
     
+    // 翻译文本并获取单词和语法解释（使用OpenAI的翻译API）
+    async translateText(text, targetLanguage = '中文') {
+        const apiKey = await this.getApiKey();
+        if (!apiKey) {
+            throw new Error('未设置OpenAI API Key。请在设置中输入您的API Key。');
+        }
+        
+        try {
+            console.log('OpenAI翻译: 开始翻译，文本长度:', text.length, '目标语言:', targetLanguage);
+            
+            // 使用Chat API进行翻译和解释
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `你是一个专业的语言学习助手。请分析用户提供的文本，并提供以下内容：
+1. 中文翻译：将文本翻译成${targetLanguage}
+2. 单词解释：提取文本中的重点单词（3-8个），每个单词需要包含：
+   - 单词本身
+   - 注音（日语用假名，英语用音标，其他语言用拼音或音标）
+   - 中文解释
+3. 语法解释：提取文本中的重点语法点（2-5个），每个语法点需要包含：
+   - 语法点本身（包含原文中的短语或句子）
+   - 详细的语法解释（说明用法、意义、语境等）
+
+请以JSON格式返回，格式如下：
+{
+  "translation": "翻译文本",
+  "vocabulary": [
+    {"word": "单词", "pronunciation": "注音", "explanation": "中文解释"}
+  ],
+  "grammar": [
+    {"phrase": "语法点原文", "explanation": "详细的语法解释，包括用法、意义、语境等"}
+  ]
+}
+
+重要要求：
+- 对于日语单词，pronunciation必须是假名（平假名或片假名）
+- 对于英语单词，pronunciation必须是音标（使用IPA国际音标）
+- 语法解释必须详细，说明语法点的用法、意义和在句子中的作用
+- 只返回JSON，不要添加任何其他内容。`
+                        },
+                        {
+                            role: 'user',
+                            content: text
+                        }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 2000,
+                    response_format: { type: "json_object" }
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+                
+                if (response.status === 401) {
+                    throw new Error('API Key无效或已过期，请检查您的OpenAI API Key。');
+                } else if (response.status === 429) {
+                    throw new Error('API调用次数超限，请稍后再试或检查您的OpenAI账户配额。');
+                } else {
+                    throw new Error('OpenAI翻译API错误: ' + errorMessage);
+                }
+            }
+            
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content?.trim();
+            
+            if (!content) {
+                throw new Error('翻译结果为空');
+            }
+            
+            // 解析JSON响应
+            let result;
+            try {
+                result = JSON.parse(content);
+            } catch (parseError) {
+                // 如果解析失败，尝试提取JSON部分
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    result = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error('无法解析翻译结果');
+                }
+            }
+            
+            console.log('OpenAI翻译: 翻译成功');
+            return {
+                translation: result.translation || '',
+                vocabulary: result.vocabulary || [],
+                grammar: result.grammar || []
+            };
+        } catch (error) {
+            console.error('OpenAI翻译失败:', error);
+            if (error.message) {
+                throw error;
+            } else {
+                throw new Error('翻译时出错: ' + (error.message || '未知错误'));
+            }
+        }
+    }
+    
     // 验证API Key是否有效（通过调用API来验证）
     async validateApiKey(apiKey) {
         if (!apiKey || !apiKey.trim()) {

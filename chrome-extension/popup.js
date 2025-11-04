@@ -62,6 +62,12 @@ class SpeakFlowApp {
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
         this.openaiApiKeyInput = document.getElementById('openai-api-key');
         this.voiceSection = document.getElementById('voice-section');
+        this.translationSection = document.getElementById('translation-section');
+        this.translationText = document.getElementById('translation-text');
+        this.vocabularySection = document.getElementById('vocabulary-section');
+        this.vocabularyList = document.getElementById('vocabulary-list');
+        this.grammarSection = document.getElementById('grammar-section');
+        this.grammarList = document.getElementById('grammar-list');
     }
 
     initEvents() {
@@ -124,12 +130,38 @@ class SpeakFlowApp {
         this.stopBtn.addEventListener('click', () => {
             this.stop();
         });
+        
+        // 当输入框内容变化时，检查是否需要更新翻译
+        this.textInput.addEventListener('input', () => {
+            const currentText = this.textInput.value.trim();
+            if (!currentText) {
+                // 如果输入框为空，隐藏翻译区域并清除保存的翻译
+                this.translationSection.style.display = 'none';
+                chrome.storage.local.remove('translationData');
+            } else {
+                // 如果输入框有内容，检查是否与保存的翻译文本匹配
+                chrome.storage.local.get(['translationData'], (result) => {
+                    if (result.translationData && result.translationData.text === currentText) {
+                        // 文本匹配，恢复翻译显示
+                        this.restoreTranslation(result.translationData);
+                    } else {
+                        // 文本不匹配，隐藏翻译区域（等待新的翻译）
+                        this.translationSection.style.display = 'none';
+                    }
+                });
+            }
+        });
     }
 
     loadSavedSettings() {
-        chrome.storage.local.get(['savedText', 'language', 'voice', 'speed', 'loop', 'useAIVoice', 'openai_api_key'], (result) => {
+        chrome.storage.local.get(['savedText', 'language', 'voice', 'speed', 'loop', 'useAIVoice', 'openai_api_key', 'translationData'], (result) => {
             if (result.savedText) {
                 this.textInput.value = result.savedText;
+                
+                // 如果文本匹配且存在翻译数据，恢复翻译显示
+                if (result.translationData && result.translationData.text === result.savedText) {
+                    this.restoreTranslation(result.translationData);
+                }
             }
             if (result.language) {
                 this.languageSelect.value = result.language;
@@ -172,6 +204,60 @@ class SpeakFlowApp {
             loop: this.loopCheckbox.checked,
             useAIVoice: this.useAIVoice
         });
+    }
+    
+    // 保存翻译数据
+    saveTranslationData(translationData) {
+        const dataToSave = {
+            text: this.textInput.value.trim(),
+            translation: translationData.translation,
+            vocabulary: translationData.vocabulary,
+            grammar: translationData.grammar
+        };
+        chrome.storage.local.set({ 'translationData': dataToSave });
+    }
+    
+    // 恢复翻译显示
+    restoreTranslation(translationData) {
+        if (!translationData || !translationData.translation) {
+            return;
+        }
+        
+        // 显示翻译区域
+        this.translationSection.style.display = 'block';
+        this.translationText.textContent = translationData.translation || '';
+        
+        // 显示单词解释
+        if (translationData.vocabulary && translationData.vocabulary.length > 0) {
+            this.vocabularyList.innerHTML = translationData.vocabulary.map(item => {
+                const word = item.word || '';
+                const pronunciation = item.pronunciation || '';
+                const explanation = item.explanation || '';
+                
+                let displayText = '';
+                if (pronunciation) {
+                    displayText = `<strong>${word}</strong>（${pronunciation}）: ${explanation}`;
+                } else {
+                    displayText = `<strong>${word}</strong>: ${explanation}`;
+                }
+                return `<div style="margin-bottom: 6px;">${displayText}</div>`;
+            }).join('');
+            this.vocabularySection.style.display = 'block';
+        } else {
+            this.vocabularySection.style.display = 'none';
+        }
+        
+        // 显示语法解释
+        if (translationData.grammar && translationData.grammar.length > 0) {
+            this.grammarList.innerHTML = translationData.grammar.map(item => {
+                const phrase = item.phrase || '';
+                const explanation = item.explanation || '';
+                return `<div style="margin-bottom: 6px;"><strong>「${phrase}」</strong>: ${explanation}</div>`;
+            }).join('');
+            this.grammarSection.style.display = 'block';
+        } else {
+            this.grammarSection.style.display = 'none';
+        }
     }
     
     loadAIVoices() {
@@ -289,12 +375,19 @@ class SpeakFlowApp {
         // 等待一下，确保停止操作完成（增加等待时间以确保循环播放也停止）
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // 开始播放
-        this.isPlaying = true;
-        this.playBtn.disabled = true;
-        this.stopBtn.disabled = false;
+        // 开始生成/播放 - 注意：此时不设置 isPlaying，因为音频还没有真正开始播放
+        // 停止按钮应该在音频真正开始播放后才启用
+        this.playBtn.disabled = true; // 禁用播放按钮，防止重复点击
+        this.stopBtn.disabled = true; // 停止按钮保持禁用，因为还没有开始播放
         this.updateStatus('正在生成语音...', 'loading');
         this.saveSettings();
+        
+        // 如果使用AI语音，先翻译文本（并行进行，不阻塞播放）
+        if (this.useAIVoice) {
+            this.translateText(text).catch(error => {
+                console.warn('翻译失败（不影响播放）:', error);
+            });
+        }
 
         // 开始播放逻辑
         if (this.useAIVoice) {
@@ -303,6 +396,7 @@ class SpeakFlowApp {
                     const apiKey = await this.openaiTTS.getApiKey();
                     if (!apiKey) {
                         this.updateStatus('请先设置OpenAI API Key！', 'error');
+                        // 恢复播放按钮，因为还没有开始播放
                         this.isPlaying = false;
                         this.playBtn.disabled = false;
                         this.stopBtn.disabled = true;
@@ -411,6 +505,7 @@ class SpeakFlowApp {
                 } catch (error) {
                     console.error('OpenAI TTS生成失败:', error);
                     this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+                    // 恢复播放按钮，因为还没有开始播放
                     this.isPlaying = false;
                     this.playBtn.disabled = false;
                     this.stopBtn.disabled = true;
@@ -449,6 +544,10 @@ class SpeakFlowApp {
                             this.stopBtn.disabled = true;
                         } else if (response && response.success) {
                             this.updateStatus('正在播放（后台运行）...', 'loading');
+                            // Chrome TTS 立即开始播放，所以启用停止按钮
+                            this.isPlaying = true;
+                            this.playBtn.disabled = true;
+                            this.stopBtn.disabled = false;
                         } else {
                             this.updateStatus('播放失败', 'error');
                             this.isPlaying = false;
@@ -665,6 +764,86 @@ class SpeakFlowApp {
     updateStatus(message, type = '') {
         this.statusBar.textContent = message;
         this.statusBar.className = 'status-bar ' + type;
+    }
+    
+    // 翻译文本并显示单词和语法解释
+    async translateText(text) {
+        if (!text || !text.trim()) {
+            return;
+        }
+        
+        // 检查是否使用AI语音（需要API Key）
+        if (!this.useAIVoice) {
+            return;
+        }
+        
+        try {
+            // 根据选择的语言判断目标语言
+            const selectedLang = this.languageSelect.value;
+            let targetLanguage = '中文';
+            
+            // 如果选择的不是中文，翻译成中文；如果选择的是中文，翻译成英文
+            if (selectedLang.startsWith('zh')) {
+                targetLanguage = '英文';
+            } else {
+                targetLanguage = '中文';
+            }
+            
+            // 显示翻译区域并显示加载状态
+            this.translationSection.style.display = 'block';
+            this.translationText.textContent = '正在翻译...';
+            this.vocabularySection.style.display = 'none';
+            this.grammarSection.style.display = 'none';
+            
+            // 调用翻译API
+            const result = await this.openaiTTS.translateText(text, targetLanguage);
+            
+            // 保存翻译数据
+            this.saveTranslationData(result);
+            
+            // 显示翻译结果
+            this.translationText.textContent = result.translation || '翻译结果为空';
+            
+            // 显示单词解释（包含注音）
+            if (result.vocabulary && result.vocabulary.length > 0) {
+                this.vocabularyList.innerHTML = result.vocabulary.map(item => {
+                    const word = item.word || '';
+                    const pronunciation = item.pronunciation || '';
+                    const explanation = item.explanation || '';
+                    
+                    // 如果有注音，显示为：单词（注音）: 解释
+                    // 如果没有注音，显示为：单词: 解释
+                    let displayText = '';
+                    if (pronunciation) {
+                        displayText = `<strong>${word}</strong>（${pronunciation}）: ${explanation}`;
+                    } else {
+                        displayText = `<strong>${word}</strong>: ${explanation}`;
+                    }
+                    return `<div style="margin-bottom: 6px;">${displayText}</div>`;
+                }).join('');
+                this.vocabularySection.style.display = 'block';
+            } else {
+                this.vocabularySection.style.display = 'none';
+            }
+            
+            // 显示语法解释
+            if (result.grammar && result.grammar.length > 0) {
+                this.grammarList.innerHTML = result.grammar.map(item => {
+                    const phrase = item.phrase || '';
+                    const explanation = item.explanation || '';
+                    return `<div style="margin-bottom: 6px;"><strong>「${phrase}」</strong>: ${explanation}</div>`;
+                }).join('');
+                this.grammarSection.style.display = 'block';
+            } else {
+                this.grammarSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('翻译失败:', error);
+            // 翻译失败时显示错误信息
+            this.translationText.textContent = '翻译失败: ' + (error.message || '未知错误');
+            this.vocabularySection.style.display = 'none';
+            this.grammarSection.style.display = 'none';
+        }
     }
 }
 
