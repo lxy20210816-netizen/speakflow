@@ -14,6 +14,7 @@ class SpeakFlowApp {
         this.initEvents();
         // 初始化按钮状态
         this.playBtn.disabled = false;
+        this.stopBtn.disabled = false; // 停止按钮始终可用
         this.loadVoices();
         this.loadSavedSettings();
         this.checkPlaybackStatus();
@@ -32,6 +33,7 @@ class SpeakFlowApp {
                     if (response.isPlaying !== this.isPlaying) {
                         this.isPlaying = response.isPlaying;
                         this.playBtn.disabled = this.isPlaying;
+                        // 停止按钮始终可用，不根据播放状态禁用
                         if (this.isPlaying) {
                             this.updateStatus('正在播放（后台运行）...', 'loading');
                         }
@@ -54,6 +56,7 @@ class SpeakFlowApp {
         this.speedValue = document.getElementById('speed-value');
         this.loopCheckbox = document.getElementById('loop-checkbox');
         this.playBtn = document.getElementById('play-btn');
+        this.stopBtn = document.getElementById('stop-btn');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -124,6 +127,10 @@ class SpeakFlowApp {
 
         this.playBtn.addEventListener('click', () => {
             this.play();
+        });
+
+        this.stopBtn.addEventListener('click', () => {
+            this.stop();
         });
         
         // 当输入框内容变化时，检查是否需要更新翻译
@@ -406,6 +413,7 @@ class SpeakFlowApp {
         
         // 开始生成/播放 - 注意：此时不设置 isPlaying，因为音频还没有真正开始播放
         this.playBtn.disabled = true; // 禁用播放按钮，防止重复点击
+        // 停止按钮始终可用，不根据播放状态禁用
         this.updateStatus('正在生成语音...', 'loading');
         this.saveSettings();
         
@@ -505,6 +513,7 @@ class SpeakFlowApp {
                                 this.updateStatus('正在播放（AI语音，后台运行）...', 'loading');
                                 this.isPlaying = true;
                                 this.playBtn.disabled = true;
+                                // 停止按钮始终可用
                                 this.aiAudioLooping = this.loopCheckbox.checked;
                             } else if (response && response.error) {
                                 this.updateStatus('播放失败: ' + response.error, 'error');
@@ -566,6 +575,7 @@ class SpeakFlowApp {
                             // Chrome TTS 立即开始播放
                             this.isPlaying = true;
                             this.playBtn.disabled = true;
+                            // 停止按钮始终可用
                         } else {
                             this.updateStatus('播放失败', 'error');
                             this.isPlaying = false;
@@ -726,6 +736,54 @@ class SpeakFlowApp {
         console.log('stopAll: 所有音频已停止');
     }
     
+    async stop() {
+        // 停止后台播放的音频
+        console.log('用户点击停止播放按钮');
+        
+        // 立即更新UI状态
+        this.playBtn.disabled = false;
+        // 停止按钮始终可用，不禁用
+        this.updateStatus('正在停止播放...', 'loading');
+        
+        try {
+            // 停止所有正在播放的音频（包括后台播放）
+            await this.stopAll();
+            
+            // 再次确认状态（检查后台是否真的停止了）
+            await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'getStatus' }, (response) => {
+                    if (response) {
+                        console.log('停止后状态检查:', response);
+                        if (response.isPlaying) {
+                            // 如果后台还在播放，再次尝试停止
+                            console.warn('后台仍在播放，再次尝试停止');
+                            this.stopAll().then(resolve);
+                        } else {
+                            resolve();
+                        }
+                    } else {
+                        resolve();
+                    }
+                });
+                setTimeout(resolve, 500); // 超时保护
+            });
+            
+            // 更新UI
+            this.isPlaying = false;
+            this.playBtn.disabled = false;
+            // 停止按钮始终可用，不禁用
+            this.updateStatus('已停止播放', 'success');
+            console.log('停止播放完成');
+        } catch (error) {
+            console.error('停止播放出错:', error);
+            this.updateStatus('停止时出错', 'error');
+            // 即使出错也更新UI状态
+            this.isPlaying = false;
+            this.playBtn.disabled = false;
+            // 停止按钮始终可用，不禁用
+        }
+    }
+
     updateStatus(message, type = '') {
         this.statusBar.textContent = message;
         this.statusBar.className = 'status-bar ' + type;
