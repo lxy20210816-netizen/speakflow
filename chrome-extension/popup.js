@@ -847,14 +847,17 @@ class SpeakFlowApp {
             }
             
             // 显示语法解释
-            if (result.grammar && result.grammar.length > 0) {
+            console.log('翻译结果中的grammar:', result.grammar);
+            if (result.grammar && Array.isArray(result.grammar) && result.grammar.length > 0) {
                 this.grammarList.innerHTML = result.grammar.map(item => {
                     const phrase = item.phrase || '';
                     const explanation = item.explanation || '';
                     return `<div style="margin-bottom: 6px;"><strong>「${phrase}」</strong>: ${explanation}</div>`;
                 }).join('');
                 this.grammarSection.style.display = 'block';
+                console.log('语法解释已显示');
             } else {
+                console.warn('语法解释为空或格式不正确:', result.grammar);
                 this.grammarSection.style.display = 'none';
             }
         } catch (error) {
