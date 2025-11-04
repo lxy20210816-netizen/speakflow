@@ -57,6 +57,7 @@ class SpeakFlowApp {
         this.loopCheckbox = document.getElementById('loop-checkbox');
         this.playBtn = document.getElementById('play-btn');
         this.stopBtn = document.getElementById('stop-btn');
+        this.randomFactBtn = document.getElementById('random-fact-btn');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -131,6 +132,10 @@ class SpeakFlowApp {
 
         this.stopBtn.addEventListener('click', () => {
             this.stop();
+        });
+
+        this.randomFactBtn.addEventListener('click', () => {
+            this.generateRandomFact();
         });
         
         // 当输入框内容变化时，检查是否需要更新翻译
@@ -791,6 +796,119 @@ class SpeakFlowApp {
     updateStatus(message, type = '') {
         this.statusBar.textContent = message;
         this.statusBar.className = 'status-bar ' + type;
+    }
+    
+    // 随机生成豆知识
+    async generateRandomFact() {
+        console.log('生成随机豆知识');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成豆知识...', 'loading');
+        this.randomFactBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成豆知识
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一个有趣的知识分享助手。请用日语生成一个有意思的小知识（豆知识），要求：\n1. 内容要简短有趣，大约5-10句话\n2. 必须是纯日语，包含汉字、平假名、片假名\n3. 可以是科学、历史、文化、自然等任何领域的有趣事实\n4. 语言要生动有趣，适合日语学习\n5. 直接返回内容，不要添加标题或额外说明\n6. 必须使用日语，不要使用其他语言'
+                        },
+                        {
+                            role: 'user',
+                            content: '请用日语生成一个有趣的豆知识。内容必须是纯日语，包含汉字和假名。'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 300
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const factText = data.choices[0]?.message?.content?.trim();
+            
+            if (!factText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('豆知识生成成功:', factText);
+            
+            // 确保语言设置为日语
+            this.languageSelect.value = 'ja-JP';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = factText;
+            this.saveSettings();
+            
+            // 自动触发翻译（如果使用AI语音）
+            if (this.useAIVoice) {
+                this.updateStatus('正在生成翻译和解释...', 'loading');
+                await this.translateText(factText);
+            }
+            
+            this.updateStatus('豆知识已生成！正在自动播放...', 'success');
+            
+            // 自动播放语音
+            // 等待一小段时间确保UI更新完成
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 调用播放方法
+            await this.play();
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成豆知识失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomFactBtn.disabled = false;
+        }
+    }
+    
+    // 获取语言名称
+    getLanguageName(langCode) {
+        const langMap = {
+            'zh-CN': '中文（普通话）',
+            'zh-HK': '中文（粤语）',
+            'zh-TW': '中文（台湾）',
+            'ja-JP': '日语',
+            'ko-KR': '韩语',
+            'en-US': '英语（美式）',
+            'en-GB': '英语（英式）',
+            'fr-FR': '法语',
+            'de-DE': '德语',
+            'es-ES': '西班牙语',
+            'it-IT': '意大利语',
+            'pt-BR': '葡萄牙语（巴西）',
+            'ru-RU': '俄语'
+        };
+        return langMap[langCode] || '中文';
     }
     
     // 翻译文本并显示单词和语法解释

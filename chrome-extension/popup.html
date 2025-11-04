@@ -13,6 +13,21 @@
             <p class="subtitle">影子跟读学习工具</p>
         </header>
 
+        <div class="button-group">
+            <button id="play-btn" class="btn-primary">生成并播放</button>
+            <button id="stop-btn" class="btn-secondary">停止播放</button>
+        </div>
+
+        <div style="margin-bottom: 15px; text-align: center;">
+            <button id="random-fact-btn" class="btn-small" style="width: auto; padding: 8px 16px;">
+                🎲 随机生成豆知识（日语）
+            </button>
+        </div>
+
+        <div class="status-bar" id="status-bar">
+            准备就绪
+        </div>
+
         <div class="section">
             <label for="text-input">输入要练习的文字：</label>
             <textarea 
@@ -102,15 +117,6 @@
                 <input type="checkbox" id="loop-checkbox" checked>
                 <span>循环播放</span>
             </label>
-        </div>
-
-        <div class="button-group">
-            <button id="play-btn" class="btn-primary">生成并播放</button>
-            <button id="stop-btn" class="btn-secondary">停止播放</button>
-        </div>
-
-        <div class="status-bar" id="status-bar">
-            准备就绪
         </div>
         
         <div class="tip-section">
