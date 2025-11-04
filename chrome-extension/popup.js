@@ -355,8 +355,6 @@ class SpeakFlowApp {
     }
 
     loadVoices() {
-        this.updateStatus('正在加载音色列表...', 'loading');
-        
         if (!chrome.tts) {
             this.updateStatus('TTS API不可用', 'error');
             return;
@@ -1173,15 +1171,15 @@ class SpeakFlowApp {
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一个日语教学助手。请随机生成一个日语单词（可以是动词、名词、形容词等），然后用日语详细解释这个单词。要求：\n1. 随机选择一个常用或有趣的日语单词（可以是常用词、流行语、网络用语等）\n2. 单词可以是动词、名词、形容词、副词等任何词性\n3. 格式要求：第一行只写单词，第二行开始用日语详细、全面地解释这个单词\n4. 解释要详细、全面，包括基本含义、不同语境下的用法、多层含义等\n5. 可以使用多个段落，从不同角度解释\n6. 如果单词有特殊背景（如网络用语、特定领域术语等），要说明背景\n7. 解释要清晰易懂，适合日语学习\n8. 必须使用日语，不要使用其他语言\n9. 不要添加任何格式标记、标题或其他多余内容，只写单词和解释'
+                            content: '你是一个日语教学助手。请随机生成一个日语单词（可以是动词、名词、形容词等），然后用日语简洁地解释这个单词。要求：\n1. 随机选择一个常用或有趣的日语单词（可以是常用词、流行语、网络用语等）\n2. 单词可以是动词、名词、形容词、副词等任何词性\n3. 格式要求：第一行只写单词，第二行开始用日语简洁地解释这个单词\n4. 解释要简洁明了，控制在2-3句话以内，只说明核心含义和基本用法\n5. 重要：解释时绝对不要使用要解释的单词本身，必须用其他不同的词汇来解释这个单词的含义\n6. 不要使用多个段落，不要从多个角度长篇解释\n7. 如果单词有特殊背景（如网络用语），用一句话简单说明即可\n8. 解释要清晰易懂，适合日语学习\n9. 必须使用日语，不要使用其他语言\n10. 不要添加任何格式标记、标题或其他多余内容，只写单词和解释'
                         },
                         {
                             role: 'user',
-                            content: '请随机生成一个日语单词，第一行只写单词，第二行开始用日语详细解释这个单词。'
+                            content: '请随机生成一个日语单词，第一行只写单词，第二行开始用日语简洁地解释这个单词（2-3句话即可）。注意：解释时绝对不要使用要解释的单词本身，必须用其他不同的词汇来解释。'
                         }
                     ],
                     temperature: 0.9,
-                    max_tokens: 800
+                    max_tokens: 300
                 })
             });
             
@@ -1253,15 +1251,15 @@ class SpeakFlowApp {
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are an English teaching assistant. Please randomly generate an English word (can be a verb, noun, adjective, etc.), and then explain this word clearly and thoroughly in English. Requirements:\n1. Randomly select a common or interesting English word (can be common words, slang, internet terms, specialized terms, etc.)\n2. The word can be a verb, noun, adjective, adverb, or any other part of speech\n3. Format requirement: First line should only contain the word, starting from the second line, explain the word in detail and comprehensively in English\n4. Explanations should be detailed and comprehensive, including basic meaning, different usages in various contexts, multiple meanings, etc.\n5. You can use multiple paragraphs to explain from different angles\n6. If the word has special background (such as slang, internet terms, specialized terminology, etc.), explain the background\n7. Explanations should be clear and easy to understand, suitable for English learning\n8. Must use English, do not use other languages\n9. Do not add any format markers, titles, or other unnecessary content, only write the word and explanation'
+                            content: 'You are an English teaching assistant. Please randomly generate an English word (can be a verb, noun, adjective, etc.), and then explain this word concisely in English. Requirements:\n1. Randomly select a common or interesting English word (can be common words, slang, internet terms, specialized terms, etc.)\n2. The word can be a verb, noun, adjective, adverb, or any other part of speech\n3. Format requirement: First line should only contain the word, starting from the second line, explain the word concisely in English\n4. Explanations should be concise and clear, limited to 2-3 sentences, only covering the core meaning and basic usage\n5. Important: When explaining, absolutely do not use the word itself to explain it, must use other different words to explain the meaning of this word\n6. Do not use multiple paragraphs, do not explain from multiple angles in detail\n7. If the word has special background (such as slang, internet terms), explain it briefly in one sentence\n8. Explanations should be clear and easy to understand, suitable for English learning\n9. Must use English, do not use other languages\n10. Do not add any format markers, titles, or other unnecessary content, only write the word and explanation'
                         },
                         {
                             role: 'user',
-                            content: 'Please randomly generate an English word. Write only the word in the first line, and starting from the second line, explain the word in detail in English.'
+                            content: 'Please randomly generate an English word. Write only the word in the first line, and starting from the second line, explain the word concisely in English (2-3 sentences only). Important: When explaining, absolutely do not use the word itself to explain it, must use other different words to explain.'
                         }
                     ],
                     temperature: 0.9,
-                    max_tokens: 800
+                    max_tokens: 300
                 })
             });
             
