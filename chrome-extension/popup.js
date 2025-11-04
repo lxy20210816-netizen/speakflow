@@ -257,7 +257,11 @@ class SpeakFlowApp {
         
         // 显示假名注音（如果是日语）
         if (translationData.furigana) {
-            this.furiganaText.innerHTML = translationData.furigana;
+            // 处理换行：将\n转换为<br>，同时保留已有的<br>标签
+            let furiganaHtml = translationData.furigana
+                .replace(/\n/g, '<br>')  // 将换行符转换为<br>标签
+                .replace(/<br><br>/g, '<br>');  // 避免重复的<br>
+            this.furiganaText.innerHTML = furiganaHtml;
             this.furiganaSection.style.display = 'block';
         } else {
             this.furiganaSection.style.display = 'none';
@@ -830,7 +834,11 @@ class SpeakFlowApp {
             
             // 显示假名注音（如果是日语）
             if (result.furigana) {
-                this.furiganaText.innerHTML = result.furigana;
+                // 处理换行：将\n转换为<br>，同时保留已有的<br>标签
+                let furiganaHtml = result.furigana
+                    .replace(/\n/g, '<br>')  // 将换行符转换为<br>标签
+                    .replace(/<br><br>/g, '<br>');  // 避免重复的<br>
+                this.furiganaText.innerHTML = furiganaHtml;
                 this.furiganaSection.style.display = 'block';
             } else {
                 this.furiganaSection.style.display = 'none';

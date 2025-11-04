@@ -152,8 +152,9 @@ class OpenAITTSHelper {
    - 使用HTML的ruby标签格式：<ruby>汉字<rt>假名</rt></ruby>
    - 对于复合词，每个汉字都要单独标注，例如：<ruby>野<rt>の</rt></ruby><ruby>井<rt>い</rt></ruby><ruby>戸<rt>ど</rt></ruby>
    - 对于单个汉字，也必须标注，例如：<ruby>私<rt>わたし</rt></ruby>、<ruby>本<rt>ほん</rt></ruby>
-   - 保持原文的标点符号和空格
+   - 保持原文的标点符号、空格和换行符
    - 确保furigana字段中没有任何未标注的汉字
+   - 如果原文中有换行，furigana字段中也要保留对应的换行，使用HTML的<br>标签或保留原始换行符
 3. 单词解释：提取文本中的重点单词（3-8个），每个单词需要包含：
    - 单词本身
    - 注音（日语用假名，英语用音标，其他语言用拼音或音标）
@@ -191,7 +192,13 @@ class OpenAITTSHelper {
 - 语法解释必须提取语法结构（如助词、助动词、句型等），而不是解释整个句子
 - 语法解释要说明这个语法点的用法、意义、语境等
 - grammar字段不能为空数组，必须至少包含2个语法点
-- 只返回JSON，不要添加任何其他内容。`
+- 重要：返回的JSON必须是有效的JSON格式，所有字符串中的特殊字符必须正确转义
+- furigana字段中的HTML标签（如<ruby>、<rt>等）必须作为普通字符串正确转义在JSON中
+- 字符串中的双引号必须使用反斜杠转义：\"，例如：<ruby>汉字<rt>假名</rt></ruby> 在JSON中应该写成 "<ruby>汉字<rt>假名<\\/rt><\\/ruby>"
+- 字符串中的反斜杠必须转义：\\，例如：路径中的反斜杠要写成 \\\\
+- 确保所有字符串都被双引号正确闭合，不要有未闭合的引号
+- 只返回JSON，不要添加任何其他内容，不要包含markdown代码块标记
+- 返回前请仔细检查JSON格式的有效性，确保所有引号、括号都正确闭合`
                         },
                         {
                             role: 'user',
@@ -199,7 +206,7 @@ class OpenAITTSHelper {
                         }
                     ],
                     temperature: 0.3,
-                    max_tokens: 2000,
+                    max_tokens: 4000, // 增加token限制，避免响应被截断
                     response_format: { type: "json_object" }
                 })
             });
@@ -220,21 +227,205 @@ class OpenAITTSHelper {
             const data = await response.json();
             const content = data.choices?.[0]?.message?.content?.trim();
             
+            // 检查响应是否被截断
+            const finishReason = data.choices?.[0]?.finish_reason;
+            if (finishReason === 'length') {
+                console.warn('OpenAI响应可能被截断（达到max_tokens限制）');
+            }
+            
             if (!content) {
                 throw new Error('翻译结果为空');
             }
+            
+            console.log('收到的内容长度:', content.length);
+            console.log('内容前200字符:', content.substring(0, 200));
+            console.log('内容后200字符:', content.substring(Math.max(0, content.length - 200)));
             
             // 解析JSON响应
             let result;
             try {
                 result = JSON.parse(content);
             } catch (parseError) {
-                // 如果解析失败，尝试提取JSON部分
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    result = JSON.parse(jsonMatch[0]);
+                console.error('JSON解析错误:', parseError.message);
+                const errorPos = parseInt(parseError.message.match(/position (\d+)/)?.[1] || '0');
+                console.error('原始内容长度:', content.length);
+                console.error('错误位置:', errorPos);
+                
+                // 检查是否是"Unexpected end of JSON input"错误
+                if (parseError.message.includes('Unexpected end of JSON input')) {
+                    console.error('检测到JSON响应被截断');
+                    // 尝试修复被截断的JSON
+                    let fixedContent = content.trim();
+                    
+                    // 尝试补全被截断的JSON
+                    // 如果JSON不完整，尝试找到最后一个完整的部分
+                    let braceCount = 0;
+                    let lastValidPos = -1;
+                    for (let i = 0; i < fixedContent.length; i++) {
+                        if (fixedContent[i] === '{') braceCount++;
+                        if (fixedContent[i] === '}') {
+                            braceCount--;
+                            if (braceCount === 0) {
+                                lastValidPos = i;
+                            }
+                        }
+                    }
+                    
+                    // 如果找到未闭合的JSON，尝试补全
+                    if (braceCount > 0) {
+                        console.warn('JSON未闭合，尝试补全');
+                        // 尝试补全缺失的部分
+                        let incompleteJson = fixedContent;
+                        
+                        // 检查是否缺少数组或对象的闭合
+                        let openBraces = (incompleteJson.match(/\{/g) || []).length;
+                        let closeBraces = (incompleteJson.match(/\}/g) || []).length;
+                        let openBrackets = (incompleteJson.match(/\[/g) || []).length;
+                        let closeBrackets = (incompleteJson.match(/\]/g) || []).length;
+                        
+                        // 补全缺失的闭合括号
+                        while (openBraces > closeBraces) {
+                            incompleteJson += '}';
+                            closeBraces++;
+                        }
+                        while (openBrackets > closeBrackets) {
+                            incompleteJson += ']';
+                            closeBrackets++;
+                        }
+                        
+                        // 尝试解析补全后的JSON
+                        try {
+                            result = JSON.parse(incompleteJson);
+                            console.log('成功解析补全后的JSON');
+                        } catch (repairError) {
+                            console.error('补全后仍然无法解析:', repairError.message);
+                            throw new Error(`翻译结果被截断，无法完整解析。可能是响应过长导致。内容长度: ${content.length}字符。请尝试缩短输入文本或检查API响应。`);
+                        }
+                    } else {
+                        // 如果不是未闭合问题，尝试其他修复方法
+                        const jsonMatch = fixedContent.match(/(\{[\s\S]*\})/);
+                        if (jsonMatch && jsonMatch[1]) {
+                            try {
+                                result = JSON.parse(jsonMatch[1]);
+                            } catch (matchError) {
+                                throw new Error(`翻译结果被截断，无法解析。内容长度: ${content.length}字符。请尝试缩短输入文本。`);
+                            }
+                        } else {
+                            throw new Error(`翻译结果被截断，无法解析。内容长度: ${content.length}字符。`);
+                        }
+                    }
                 } else {
-                    throw new Error('无法解析翻译结果');
+                    // 其他JSON解析错误
+                    if (errorPos > 0) {
+                        const start = Math.max(0, errorPos - 200);
+                        const end = Math.min(content.length, errorPos + 200);
+                        console.error('错误位置附近的内容:', content.substring(start, end));
+                    }
+                    
+                    // 检查是否是"Unterminated string"错误
+                    if (parseError.message.includes('Unterminated string')) {
+                        console.error('检测到未闭合的字符串，尝试修复');
+                        let fixedContent = content.trim();
+                        
+                        // 尝试修复未闭合的字符串
+                        // 方法：找到错误位置，尝试补全字符串
+                        if (errorPos > 0 && errorPos < fixedContent.length) {
+                            // 从错误位置向前查找，找到最近的未闭合字符串开始位置
+                            let quoteCount = 0;
+                            let escapeNext = false;
+                            
+                            // 向前查找，计算引号数量（考虑转义）
+                            for (let i = errorPos - 1; i >= 0; i--) {
+                                if (escapeNext) {
+                                    escapeNext = false;
+                                    continue;
+                                }
+                                if (fixedContent[i] === '\\') {
+                                    escapeNext = true;
+                                    continue;
+                                }
+                                if (fixedContent[i] === '"' && !escapeNext) {
+                                    quoteCount++;
+                                }
+                            }
+                            
+                            // 如果引号数量是奇数，说明有未闭合的字符串
+                            if (quoteCount % 2 === 1) {
+                                // 尝试在错误位置插入闭合引号
+                                let beforeError = fixedContent.substring(0, errorPos);
+                                let afterError = fixedContent.substring(errorPos);
+                                
+                                // 检查错误位置前最后一个字符，如果不是引号，尝试插入
+                                const lastChar = beforeError[beforeError.length - 1];
+                                if (lastChar !== '"' || (beforeError.length > 1 && beforeError[beforeError.length - 2] === '\\')) {
+                                    // 在错误位置前插入闭合引号
+                                    fixedContent = beforeError + '"' + afterError;
+                                    console.log('尝试在位置', errorPos, '前插入闭合引号');
+                                    try {
+                                        result = JSON.parse(fixedContent);
+                                        console.log('成功修复未闭合字符串');
+                                    } catch (repairError) {
+                                        console.error('修复未闭合字符串失败:', repairError.message);
+                                        // 尝试在错误位置之后查找合适的位置插入引号
+                                        // 查找下一个可能是字符串结束的位置
+                                        let foundInsertPos = false;
+                                        for (let i = errorPos; i < Math.min(errorPos + 100, fixedContent.length); i++) {
+                                            if (fixedContent[i] === ',' || fixedContent[i] === '}' || fixedContent[i] === ']') {
+                                                fixedContent = fixedContent.substring(0, i) + '"' + fixedContent.substring(i);
+                                                console.log('尝试在位置', i, '前插入闭合引号');
+                                                try {
+                                                    result = JSON.parse(fixedContent);
+                                                    console.log('成功修复未闭合字符串（在后续位置）');
+                                                    foundInsertPos = true;
+                                                    break;
+                                                } catch (tryError) {
+                                                    // 回滚，尝试下一个位置
+                                                    fixedContent = content.trim();
+                                                }
+                                            }
+                                        }
+                                        if (!foundInsertPos) {
+                                            fixedContent = content.trim();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 如果修复失败，尝试提取JSON部分
+                        if (!result) {
+                            let extractedContent = content.trim();
+                            const jsonMatch = extractedContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) || extractedContent.match(/(\{[\s\S]*\})/);
+                            if (jsonMatch && jsonMatch[1]) {
+                                extractedContent = jsonMatch[1];
+                                try {
+                                    result = JSON.parse(extractedContent);
+                                } catch (matchError) {
+                                    console.error('提取JSON部分后仍然失败:', matchError.message);
+                                }
+                            }
+                        }
+                        
+                        if (!result) {
+                            throw new Error(`无法解析翻译结果: ${parseError.message}. JSON中包含未闭合的字符串（可能是HTML标签中的引号未正确转义）。错误位置: ${errorPos || '未知'}. 建议：请检查furigana字段中的HTML标签是否正确转义了所有引号和反斜杠。`);
+                        }
+                    } else {
+                        // 其他类型的JSON错误
+                        // 尝试提取JSON部分
+                        let fixedContent = content.trim();
+                        const jsonMatch = fixedContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) || fixedContent.match(/(\{[\s\S]*\})/);
+                        if (jsonMatch && jsonMatch[1]) {
+                            fixedContent = jsonMatch[1];
+                            try {
+                                result = JSON.parse(fixedContent);
+                            } catch (secondError) {
+                                console.error('第二次解析也失败:', secondError.message);
+                                throw new Error(`无法解析翻译结果: ${parseError.message}. 错误位置: ${errorPos || '未知'}. 请检查返回的JSON格式是否正确。`);
+                            }
+                        } else {
+                            throw new Error(`无法解析翻译结果: ${parseError.message}. 未找到有效的JSON对象。错误位置: ${errorPos || '未知'}.`);
+                        }
+                    }
                 }
             }
             
