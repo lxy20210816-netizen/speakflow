@@ -68,6 +68,7 @@ class SpeakFlowApp {
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
         this.openaiApiKeyInput = document.getElementById('openai-api-key');
         this.voiceSection = document.getElementById('voice-section');
+        this.languageSection = document.getElementById('language-section');
         this.translationSection = document.getElementById('translation-section');
         this.translationText = document.getElementById('translation-text');
         this.furiganaSection = document.getElementById('furigana-section');
@@ -109,11 +110,7 @@ class SpeakFlowApp {
             this.useAIVoice = this.useAIVoiceCheckbox.checked;
             this.aiVoiceSettings.style.display = this.useAIVoice ? 'block' : 'none';
             this.voiceSection.style.display = this.useAIVoice ? 'none' : 'block';
-            
-            const aiTipText = document.getElementById('ai-tip-text');
-            if (aiTipText) {
-                aiTipText.style.display = this.useAIVoice ? 'block' : 'none';
-            }
+            this.languageSection.style.display = this.useAIVoice ? 'none' : 'block';
             
             if (this.useAIVoice) {
                 this.loadAIVoices();
@@ -239,6 +236,7 @@ class SpeakFlowApp {
                 this.useAIVoice = true;
                 this.aiVoiceSettings.style.display = 'block';
                 this.voiceSection.style.display = 'none';
+                this.languageSection.style.display = 'none';
                 this.loadAIVoices();
             }
             if (result.openai_api_key) {
@@ -831,6 +829,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -911,6 +910,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -991,6 +991,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -1071,6 +1072,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -1151,6 +1153,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -1231,6 +1234,7 @@ class SpeakFlowApp {
             this.useAIVoice = true;
             this.aiVoiceSettings.style.display = 'block';
             this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
             this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }

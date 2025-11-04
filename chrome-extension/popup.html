@@ -66,7 +66,7 @@
             </div>
         </div>
 
-        <div class="section">
+        <div class="section" id="language-section">
             <label for="language-select">选择语言：</label>
             <select id="language-select">
                 <option value="zh-CN">中文（普通话）</option>
@@ -86,11 +86,22 @@
         </div>
 
         <div class="section">
-            <label class="checkbox-label" style="margin-bottom: 10px;">
-                <input type="checkbox" id="use-ai-voice">
-                <span>使用AI语音（OpenAI TTS，类似ChatGPT）</span>
-            </label>
-            <div id="ai-voice-settings" style="display: none; margin-left: 24px; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                <label class="checkbox-label" style="margin: 0;">
+                    <input type="checkbox" id="use-ai-voice">
+                    <span>使用AI语音</span>
+                </label>
+                <div class="speed-control" style="flex: 1; min-width: 200px;">
+                    <label for="speed-slider">播放倍速：</label>
+                    <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+                    <span id="speed-value">1.0x</span>
+                </div>
+                <label class="checkbox-label" style="margin: 0;">
+                    <input type="checkbox" id="loop-checkbox" checked>
+                    <span>循环播放</span>
+                </label>
+            </div>
+            <div id="ai-voice-settings" style="display: none; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;">
                 <label for="openai-api-key" style="font-size: 14px; color: #444; font-weight: 500; display: block; margin-bottom: 6px;">OpenAI API Key:</label>
                 <input 
                     type="password" 
@@ -114,26 +125,8 @@
                 <button id="refresh-voices" class="btn-small">刷新</button>
             </div>
         </div>
-
-        <div class="section">
-            <div class="speed-control">
-                <label for="speed-slider">播放倍速：</label>
-                <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0">
-                <span id="speed-value">1.0x</span>
-            </div>
-        </div>
-
-        <div class="section">
-            <label class="checkbox-label">
-                <input type="checkbox" id="loop-checkbox" checked>
-                <span>循环播放</span>
-            </label>
-        </div>
         
-        <div class="tip-section">
-            <p class="tip-text" id="tip-text">
-                💡 提示：使用AI语音可获得更自然、更高质量的语音效果
-            </p>
+        <div class="tip-section" style="display: none;">
             <p class="tip-text" id="ai-tip-text" style="display: none; color: #ff9800; font-weight: 600; margin-top: 5px;">
                 ⚠️ AI语音需要在弹窗打开时播放。如需后台播放，请使用Chrome TTS。
             </p>
