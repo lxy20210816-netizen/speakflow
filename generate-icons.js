@@ -3,48 +3,23 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-// SVG 图标内容
-const svgContent = `<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- 背景圆角矩形 -->
-  <rect width="128" height="128" rx="24" fill="url(#grad1)"/>
-  
-  <!-- 麦克风图标 -->
-  <g transform="translate(64, 64)">
-    <!-- 麦克风主体 -->
-    <rect x="-12" y="-20" width="24" height="32" rx="12" fill="white" opacity="0.95"/>
-    
-    <!-- 麦克风底座 -->
-    <rect x="-8" y="12" width="16" height="6" rx="3" fill="white" opacity="0.95"/>
-    
-    <!-- 麦克风网格线 -->
-    <line x1="-8" y1="-10" x2="8" y2="-10" stroke="#667eea" stroke-width="1.5" opacity="0.6"/>
-    <line x1="-8" y1="0" x2="8" y2="0" stroke="#667eea" stroke-width="1.5" opacity="0.6"/>
-    <line x1="-8" y1="10" x2="8" y2="10" stroke="#667eea" stroke-width="1.5" opacity="0.6"/>
-    
-    <!-- 声波效果 -->
-    <path d="M 20,0 Q 30,-5 30,0 Q 30,5 20,0" fill="none" stroke="white" stroke-width="2" opacity="0.7"/>
-    <path d="M 25,0 Q 38,-8 38,0 Q 38,8 25,0" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
-    <path d="M -20,0 Q -30,-5 -30,0 Q -30,5 -20,0" fill="none" stroke="white" stroke-width="2" opacity="0.7"/>
-    <path d="M -25,0 Q -38,-8 -38,0 Q -38,8 -25,0" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
-  </g>
-</svg>`;
-
 async function generateIcons() {
   const sizes = [16, 32, 48, 128];
   const iconsDir = path.join(__dirname, 'chrome-extension', 'icons');
+  const svgPath = path.join(iconsDir, 'icon.svg');
   
   // 确保目录存在
   if (!fs.existsSync(iconsDir)) {
     fs.mkdirSync(iconsDir, { recursive: true });
   }
   
+  // 读取SVG文件
+  if (!fs.existsSync(svgPath)) {
+    console.error('错误: 找不到 icon.svg 文件');
+    process.exit(1);
+  }
+  
+  const svgContent = fs.readFileSync(svgPath, 'utf8');
   const buffer = Buffer.from(svgContent);
   
   console.log('正在生成图标...');
