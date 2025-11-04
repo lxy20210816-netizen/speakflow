@@ -9,7 +9,7 @@ body {
     width: 650px;
     min-height: 1500px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
+    color: #222;
 }
 
 .container {
@@ -45,8 +45,8 @@ label {
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    font-size: 14px;
-    color: #555;
+    font-size: 15px;
+    color: #333;
 }
 
 textarea {
@@ -54,8 +54,9 @@ textarea {
     padding: 12px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 17px;
     font-family: inherit;
+    color: #222;
     resize: vertical;
     transition: border-color 0.3s;
 }
@@ -70,7 +71,8 @@ select {
     padding: 10px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 15px;
+    color: #222;
     background: white;
     cursor: pointer;
     transition: border-color 0.3s;
@@ -214,8 +216,8 @@ select:focus {
     padding: 10px;
     background: #f8f9fa;
     border-radius: 6px;
-    font-size: 12px;
-    color: #666;
+    font-size: 14px;
+    color: #444;
     text-align: center;
     min-height: 36px;
     display: flex;
@@ -245,8 +247,8 @@ select:focus {
 }
 
 .tip-text {
-    font-size: 11px;
-    color: #666;
+    font-size: 13px;
+    color: #444;
     text-align: center;
     line-height: 1.4;
 }
@@ -258,8 +260,8 @@ ruby {
 }
 
 ruby rt {
-    font-size: 0.7em;
-    color: #666;
+    font-size: 0.65em;
+    color: #444;
     padding: 0 1px;
 }
 

@@ -58,6 +58,9 @@ class SpeakFlowApp {
         this.playBtn = document.getElementById('play-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.randomFactBtn = document.getElementById('random-fact-btn');
+        this.randomNewsBtn = document.getElementById('random-news-btn');
+        this.randomFactEnBtn = document.getElementById('random-fact-en-btn');
+        this.randomNewsEnBtn = document.getElementById('random-news-en-btn');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -136,6 +139,18 @@ class SpeakFlowApp {
 
         this.randomFactBtn.addEventListener('click', () => {
             this.generateRandomFact();
+        });
+
+        this.randomNewsBtn.addEventListener('click', () => {
+            this.generateRandomNews();
+        });
+
+        this.randomFactEnBtn.addEventListener('click', () => {
+            this.generateRandomFactEnglish();
+        });
+
+        this.randomNewsEnBtn.addEventListener('click', () => {
+            this.generateRandomNewsEnglish();
         });
         
         // 当输入框内容变化时，检查是否需要更新翻译
@@ -865,20 +880,7 @@ class SpeakFlowApp {
             this.textInput.value = factText;
             this.saveSettings();
             
-            // 自动触发翻译（如果使用AI语音）
-            if (this.useAIVoice) {
-                this.updateStatus('正在生成翻译和解释...', 'loading');
-                await this.translateText(factText);
-            }
-            
-            this.updateStatus('豆知识已生成！正在自动播放...', 'success');
-            
-            // 自动播放语音
-            // 等待一小段时间确保UI更新完成
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // 调用播放方法
-            await this.play();
+            this.updateStatus('豆知识已生成！', 'success');
             
             // 滚动到文本输入框
             this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -888,6 +890,246 @@ class SpeakFlowApp {
             this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
         } finally {
             this.randomFactBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成最近新闻（日语）
+    async generateRandomNews() {
+        console.log('生成随机日语新闻');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成日语新闻...', 'loading');
+        this.randomNewsBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成日语新闻
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一个日语新闻编辑。请用日语生成一条最近的有趣新闻，要求：\n1. 内容要简短，大约5-10句话\n2. 必须是纯日语，包含汉字、平假名、片假名\n3. 可以是科技、社会、文化、娱乐等任何领域的新闻\n4. 语言要正式但易懂，适合日语学习\n5. 直接返回新闻内容，不要添加标题或额外说明\n6. 必须使用日语，不要使用其他语言\n7. 内容要像真实的新闻一样，有新闻价值'
+                        },
+                        {
+                            role: 'user',
+                            content: '请用日语生成一条最近的有趣新闻。内容必须是纯日语，包含汉字和假名。'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 400
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const newsText = data.choices[0]?.message?.content?.trim();
+            
+            if (!newsText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('日语新闻生成成功:', newsText);
+            
+            // 确保语言设置为日语
+            this.languageSelect.value = 'ja-JP';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = newsText;
+            this.saveSettings();
+            
+            this.updateStatus('日语新闻已生成！', 'success');
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成日语新闻失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomNewsBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成豆知识（英语）
+    async generateRandomFactEnglish() {
+        console.log('生成随机英语豆知识');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成英语豆知识...', 'loading');
+        this.randomFactEnBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成英语豆知识
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are an interesting knowledge sharing assistant. Please generate an interesting fact (trivia) in English, requirements:\n1. Content should be short and interesting, about 5-10 sentences\n2. Must be pure English\n3. Can be about science, history, culture, nature, or any other interesting field\n4. Language should be vivid and interesting, suitable for English learning\n5. Return content directly, do not add titles or additional explanations\n6. Must use English, do not use other languages'
+                        },
+                        {
+                            role: 'user',
+                            content: 'Please generate an interesting fact in English. Content must be pure English.'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 300
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const factText = data.choices[0]?.message?.content?.trim();
+            
+            if (!factText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('英语豆知识生成成功:', factText);
+            
+            // 确保语言设置为英语（美式）
+            this.languageSelect.value = 'en-US';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = factText;
+            this.saveSettings();
+            
+            this.updateStatus('英语豆知识已生成！', 'success');
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成英语豆知识失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomFactEnBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成最近新闻（英语）
+    async generateRandomNewsEnglish() {
+        console.log('生成随机英语新闻');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成英语新闻...', 'loading');
+        this.randomNewsEnBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成英语新闻
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are an English news editor. Please generate a recent interesting news article in English, requirements:\n1. Content should be short, about 5-10 sentences\n2. Must be pure English\n3. Can be about technology, society, culture, entertainment, or any other field\n4. Language should be formal but easy to understand, suitable for English learning\n5. Return news content directly, do not add titles or additional explanations\n6. Must use English, do not use other languages\n7. Content should be like real news, with news value'
+                        },
+                        {
+                            role: 'user',
+                            content: 'Please generate a recent interesting news article in English. Content must be pure English.'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 400
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const newsText = data.choices[0]?.message?.content?.trim();
+            
+            if (!newsText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('英语新闻生成成功:', newsText);
+            
+            // 确保语言设置为英语（美式）
+            this.languageSelect.value = 'en-US';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = newsText;
+            this.saveSettings();
+            
+            this.updateStatus('英语新闻已生成！', 'success');
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成英语新闻失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomNewsEnBtn.disabled = false;
         }
     }
     
