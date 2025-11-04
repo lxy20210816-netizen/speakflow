@@ -84,9 +84,7 @@ select:focus {
 }
 
 #voice-select {
-    width: calc(100% - 70px);
-    display: inline-block;
-    margin-right: 5px;
+    flex: 1;
 }
 
 .btn-small {
@@ -102,6 +100,45 @@ select:focus {
 
 .btn-small:hover {
     background: #5568d3;
+}
+
+.random-buttons-container {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.random-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-random {
+    flex: 1;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 0;
+}
+
+.btn-random:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5568d3 0%, #654a8a 100%);
+}
+
+.btn-random:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .speed-control {
@@ -167,17 +204,17 @@ select:focus {
 
 .button-group {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     margin-top: 20px;
     margin-bottom: 15px;
 }
 
 .btn-primary, .btn-secondary {
     flex: 1;
-    padding: 12px;
+    padding: 14px 20px;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;

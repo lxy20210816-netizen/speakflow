@@ -61,6 +61,8 @@ class SpeakFlowApp {
         this.randomNewsBtn = document.getElementById('random-news-btn');
         this.randomFactEnBtn = document.getElementById('random-fact-en-btn');
         this.randomNewsEnBtn = document.getElementById('random-news-en-btn');
+        this.randomWordJaBtn = document.getElementById('random-word-ja-btn');
+        this.randomWordEnBtn = document.getElementById('random-word-en-btn');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -151,6 +153,14 @@ class SpeakFlowApp {
 
         this.randomNewsEnBtn.addEventListener('click', () => {
             this.generateRandomNewsEnglish();
+        });
+
+        this.randomWordJaBtn.addEventListener('click', () => {
+            this.generateRandomWordJapanese();
+        });
+
+        this.randomWordEnBtn.addEventListener('click', () => {
+            this.generateRandomWordEnglish();
         });
         
         // 当输入框内容变化时，检查是否需要更新翻译
@@ -1130,6 +1140,166 @@ class SpeakFlowApp {
             this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
         } finally {
             this.randomNewsEnBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成单词（日语）
+    async generateRandomWordJapanese() {
+        console.log('生成随机日语单词');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成日语单词...', 'loading');
+        this.randomWordJaBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成日语单词及解释
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一个日语教学助手。请随机生成一个日语单词（可以是动词、名词、形容词等），然后用日语详细解释这个单词。要求：\n1. 随机选择一个常用或有趣的日语单词（可以是常用词、流行语、网络用语等）\n2. 单词可以是动词、名词、形容词、副词等任何词性\n3. 格式要求：第一行只写单词，第二行开始用日语详细、全面地解释这个单词\n4. 解释要详细、全面，包括基本含义、不同语境下的用法、多层含义等\n5. 可以使用多个段落，从不同角度解释\n6. 如果单词有特殊背景（如网络用语、特定领域术语等），要说明背景\n7. 解释要清晰易懂，适合日语学习\n8. 必须使用日语，不要使用其他语言\n9. 不要添加任何格式标记、标题或其他多余内容，只写单词和解释'
+                        },
+                        {
+                            role: 'user',
+                            content: '请随机生成一个日语单词，第一行只写单词，第二行开始用日语详细解释这个单词。'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 800
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const wordText = data.choices[0]?.message?.content?.trim();
+            
+            if (!wordText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('日语单词生成成功:', wordText);
+            
+            // 确保语言设置为日语
+            this.languageSelect.value = 'ja-JP';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = wordText;
+            this.saveSettings();
+            
+            this.updateStatus('日语单词已生成！', 'success');
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成日语单词失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomWordJaBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成单词（英语）
+    async generateRandomWordEnglish() {
+        console.log('生成随机英语单词');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成英语单词...', 'loading');
+        this.randomWordEnBtn.disabled = true;
+        
+        try {
+            // 使用OpenAI API生成英语单词及解释
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are an English teaching assistant. Please randomly generate an English word (can be a verb, noun, adjective, etc.), and then explain this word clearly and thoroughly in English. Requirements:\n1. Randomly select a common or interesting English word (can be common words, slang, internet terms, specialized terms, etc.)\n2. The word can be a verb, noun, adjective, adverb, or any other part of speech\n3. Format requirement: First line should only contain the word, starting from the second line, explain the word in detail and comprehensively in English\n4. Explanations should be detailed and comprehensive, including basic meaning, different usages in various contexts, multiple meanings, etc.\n5. You can use multiple paragraphs to explain from different angles\n6. If the word has special background (such as slang, internet terms, specialized terminology, etc.), explain the background\n7. Explanations should be clear and easy to understand, suitable for English learning\n8. Must use English, do not use other languages\n9. Do not add any format markers, titles, or other unnecessary content, only write the word and explanation'
+                        },
+                        {
+                            role: 'user',
+                            content: 'Please randomly generate an English word. Write only the word in the first line, and starting from the second line, explain the word in detail in English.'
+                        }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 800
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const wordText = data.choices[0]?.message?.content?.trim();
+            
+            if (!wordText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('英语单词生成成功:', wordText);
+            
+            // 确保语言设置为英语（美式）
+            this.languageSelect.value = 'en-US';
+            this.filterVoicesByLanguage();
+            
+            // 填充到输入框
+            this.textInput.value = wordText;
+            this.saveSettings();
+            
+            this.updateStatus('英语单词已生成！', 'success');
+            
+            // 滚动到文本输入框
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } catch (error) {
+            console.error('生成英语单词失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            this.randomWordEnBtn.disabled = false;
         }
     }
     

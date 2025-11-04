@@ -18,19 +18,19 @@
             <button id="stop-btn" class="btn-secondary">停止播放</button>
         </div>
 
-        <div style="margin-bottom: 15px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <button id="random-fact-btn" class="btn-small" style="width: auto; padding: 8px 16px;">
-                🎲 随机生成豆知识（日语）
-            </button>
-            <button id="random-news-btn" class="btn-small" style="width: auto; padding: 8px 16px;">
-                🎲 随机生成最近新闻（日语）
-            </button>
-            <button id="random-fact-en-btn" class="btn-small" style="width: auto; padding: 8px 16px;">
-                🎲 随机生成豆知识（英语）
-            </button>
-            <button id="random-news-en-btn" class="btn-small" style="width: auto; padding: 8px 16px;">
-                🎲 随机生成最近新闻（英语）
-            </button>
+        <div class="random-buttons-container">
+            <div class="random-buttons-row">
+                <button id="random-fact-btn" class="btn-random">🎲 随机生成豆知识（日语）</button>
+                <button id="random-news-btn" class="btn-random">🎲 随机生成最近新闻（日语）</button>
+            </div>
+            <div class="random-buttons-row">
+                <button id="random-fact-en-btn" class="btn-random">🎲 随机生成豆知识（英语）</button>
+                <button id="random-news-en-btn" class="btn-random">🎲 随机生成最近新闻（英语）</button>
+            </div>
+            <div class="random-buttons-row">
+                <button id="random-word-ja-btn" class="btn-random">📚 随机生成单词（日语）</button>
+                <button id="random-word-en-btn" class="btn-random">📚 随机生成单词（英语）</button>
+            </div>
         </div>
 
         <div class="status-bar" id="status-bar">
@@ -90,16 +90,16 @@
                 <input type="checkbox" id="use-ai-voice">
                 <span>使用AI语音（OpenAI TTS，类似ChatGPT）</span>
             </label>
-            <div id="ai-voice-settings" style="display: none; margin-left: 24px; margin-top: 8px;">
-                <label for="openai-api-key" style="font-size: 12px;">OpenAI API Key:</label>
+            <div id="ai-voice-settings" style="display: none; margin-left: 24px; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;">
+                <label for="openai-api-key" style="font-size: 14px; color: #444; font-weight: 500; display: block; margin-bottom: 6px;">OpenAI API Key:</label>
                 <input 
                     type="password" 
                     id="openai-api-key" 
                     placeholder="sk-..." 
-                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;"
+                    style="width: 100%; padding: 10px; margin-top: 4px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; color: #222;"
                 >
-                <p style="font-size: 11px; color: #666; margin-top: 4px;">
-                    💡 获取API Key: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #667eea;">前往OpenAI平台</a><br>
+                <p style="font-size: 12px; color: #555; margin-top: 8px; line-height: 1.5;">
+                    💡 获取API Key: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #667eea; text-decoration: none;">前往OpenAI平台</a><br>
                     ⚠️ API Key仅存储在本地，不会上传到服务器
                 </p>
             </div>
@@ -107,10 +107,12 @@
 
         <div class="section" id="voice-section">
             <label for="voice-select">选择音色：</label>
-            <select id="voice-select">
-                <option value="">自动选择</option>
-            </select>
-            <button id="refresh-voices" class="btn-small">刷新</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="voice-select" style="flex: 1;">
+                    <option value="">自动选择</option>
+                </select>
+                <button id="refresh-voices" class="btn-small">刷新</button>
+            </div>
         </div>
 
         <div class="section">
