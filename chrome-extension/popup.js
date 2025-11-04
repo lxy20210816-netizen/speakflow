@@ -14,7 +14,6 @@ class SpeakFlowApp {
         this.initEvents();
         // 初始化按钮状态
         this.playBtn.disabled = false;
-        this.stopBtn.disabled = true;
         this.loadVoices();
         this.loadSavedSettings();
         this.checkPlaybackStatus();
@@ -33,7 +32,6 @@ class SpeakFlowApp {
                     if (response.isPlaying !== this.isPlaying) {
                         this.isPlaying = response.isPlaying;
                         this.playBtn.disabled = this.isPlaying;
-                        this.stopBtn.disabled = !this.isPlaying;
                         if (this.isPlaying) {
                             this.updateStatus('正在播放（后台运行）...', 'loading');
                         }
@@ -56,7 +54,6 @@ class SpeakFlowApp {
         this.speedValue = document.getElementById('speed-value');
         this.loopCheckbox = document.getElementById('loop-checkbox');
         this.playBtn = document.getElementById('play-btn');
-        this.stopBtn = document.getElementById('stop-btn');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -128,10 +125,6 @@ class SpeakFlowApp {
         this.playBtn.addEventListener('click', () => {
             this.play();
         });
-
-        this.stopBtn.addEventListener('click', () => {
-            this.stop();
-        });
         
         // 当输入框内容变化时，检查是否需要更新翻译
         this.textInput.addEventListener('input', () => {
@@ -141,13 +134,19 @@ class SpeakFlowApp {
                 this.translationSection.style.display = 'none';
                 chrome.storage.local.remove('translationData');
             } else {
-                // 如果输入框有内容，检查是否与保存的翻译文本匹配
+                // 如果输入框有内容，检查是否与保存的翻译文本匹配（使用trim()处理空格差异）
                 chrome.storage.local.get(['translationData'], (result) => {
-                    if (result.translationData && result.translationData.text === currentText) {
-                        // 文本匹配，恢复翻译显示
-                        this.restoreTranslation(result.translationData);
+                    if (result.translationData) {
+                        const translationTextTrimmed = (result.translationData.text || '').trim();
+                        if (translationTextTrimmed === currentText) {
+                            // 文本匹配，恢复翻译显示
+                            this.restoreTranslation(result.translationData);
+                        } else {
+                            // 文本不匹配，隐藏翻译区域（等待新的翻译）
+                            this.translationSection.style.display = 'none';
+                        }
                     } else {
-                        // 文本不匹配，隐藏翻译区域（等待新的翻译）
+                        // 没有翻译数据，隐藏翻译区域
                         this.translationSection.style.display = 'none';
                     }
                 });
@@ -160,10 +159,25 @@ class SpeakFlowApp {
             if (result.savedText) {
                 this.textInput.value = result.savedText;
                 
-                // 如果文本匹配且存在翻译数据，恢复翻译显示
-                if (result.translationData && result.translationData.text === result.savedText) {
-                    this.restoreTranslation(result.translationData);
+                // 如果存在翻译数据，检查文本是否匹配（使用trim()处理空格差异）
+                if (result.translationData) {
+                    const savedTextTrimmed = result.savedText.trim();
+                    const translationTextTrimmed = (result.translationData.text || '').trim();
+                    
+                    if (translationTextTrimmed === savedTextTrimmed) {
+                        // 文本匹配，恢复翻译显示
+                        this.restoreTranslation(result.translationData);
+                    } else {
+                        console.log('翻译数据文本不匹配:', {
+                            saved: savedTextTrimmed,
+                            translation: translationTextTrimmed
+                        });
+                    }
                 }
+            } else if (result.translationData) {
+                // 即使没有savedText，如果有翻译数据，也尝试恢复（可能用户清空了输入框但翻译数据还在）
+                // 但这种情况不自动恢复，因为不知道应该显示哪个文本的翻译
+                console.log('存在翻译数据但没有保存的文本');
             }
             if (result.language) {
                 this.languageSelect.value = result.language;
@@ -198,8 +212,9 @@ class SpeakFlowApp {
     }
 
     saveSettings() {
+        // 使用trim()确保文本一致性，避免空格导致的匹配问题
         chrome.storage.local.set({
-            savedText: this.textInput.value,
+            savedText: this.textInput.value.trim(),
             language: this.languageSelect.value,
             voice: this.voiceSelect.value,
             speed: this.speedSlider.value,
@@ -210,14 +225,17 @@ class SpeakFlowApp {
     
     // 保存翻译数据
     saveTranslationData(translationData) {
+        // 使用trim()确保文本一致性，避免空格导致的匹配问题
+        const textToSave = this.textInput.value.trim();
         const dataToSave = {
-            text: this.textInput.value.trim(),
+            text: textToSave,
             translation: translationData.translation,
             furigana: translationData.furigana,
             vocabulary: translationData.vocabulary,
             grammar: translationData.grammar
         };
         chrome.storage.local.set({ 'translationData': dataToSave });
+        console.log('翻译数据已保存，文本:', textToSave);
     }
     
     // 恢复翻译显示
@@ -387,9 +405,7 @@ class SpeakFlowApp {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // 开始生成/播放 - 注意：此时不设置 isPlaying，因为音频还没有真正开始播放
-        // 停止按钮应该在音频真正开始播放后才启用
         this.playBtn.disabled = true; // 禁用播放按钮，防止重复点击
-        this.stopBtn.disabled = true; // 停止按钮保持禁用，因为还没有开始播放
         this.updateStatus('正在生成语音...', 'loading');
         this.saveSettings();
         
@@ -410,7 +426,6 @@ class SpeakFlowApp {
                         // 恢复播放按钮，因为还没有开始播放
                         this.isPlaying = false;
                         this.playBtn.disabled = false;
-                        this.stopBtn.disabled = true;
                         return;
                     }
                     
@@ -486,23 +501,19 @@ class SpeakFlowApp {
                                 this.updateStatus('播放失败: ' + errorMsg, 'error');
                                 this.isPlaying = false;
                                 this.playBtn.disabled = false;
-                                this.stopBtn.disabled = true;
                             } else if (response && response.success) {
                                 this.updateStatus('正在播放（AI语音，后台运行）...', 'loading');
                                 this.isPlaying = true;
                                 this.playBtn.disabled = true;
-                                this.stopBtn.disabled = false;
                                 this.aiAudioLooping = this.loopCheckbox.checked;
                             } else if (response && response.error) {
                                 this.updateStatus('播放失败: ' + response.error, 'error');
                                 this.isPlaying = false;
                                 this.playBtn.disabled = false;
-                                this.stopBtn.disabled = true;
                             } else {
                                 this.updateStatus('播放失败', 'error');
                                 this.isPlaying = false;
                                 this.playBtn.disabled = false;
-                                this.stopBtn.disabled = true;
                             }
                         });
                     } catch (error) {
@@ -511,7 +522,6 @@ class SpeakFlowApp {
                         this.updateStatus('播放失败: ' + (error.message || '需要用户交互'), 'error');
                         this.isPlaying = false;
                         this.playBtn.disabled = false;
-                        this.stopBtn.disabled = true;
                     }
                 } catch (error) {
                     console.error('OpenAI TTS生成失败:', error);
@@ -519,7 +529,6 @@ class SpeakFlowApp {
                     // 恢复播放按钮，因为还没有开始播放
                     this.isPlaying = false;
                     this.playBtn.disabled = false;
-                    this.stopBtn.disabled = true;
                 }
             } else {
                 // 使用Chrome TTS
@@ -552,18 +561,15 @@ class SpeakFlowApp {
                             this.updateStatus('播放失败: ' + errorMsg, 'error');
                             this.isPlaying = false;
                             this.playBtn.disabled = false;
-                            this.stopBtn.disabled = true;
                         } else if (response && response.success) {
                             this.updateStatus('正在播放（后台运行）...', 'loading');
-                            // Chrome TTS 立即开始播放，所以启用停止按钮
+                            // Chrome TTS 立即开始播放
                             this.isPlaying = true;
                             this.playBtn.disabled = true;
-                            this.stopBtn.disabled = false;
                         } else {
                             this.updateStatus('播放失败', 'error');
                             this.isPlaying = false;
                             this.playBtn.disabled = false;
-                            this.stopBtn.disabled = true;
                         }
                     });
                 } catch (error) {
@@ -571,7 +577,6 @@ class SpeakFlowApp {
                     this.updateStatus('播放失败: ' + error.message, 'error');
                     this.isPlaying = false;
                     this.playBtn.disabled = false;
-                    this.stopBtn.disabled = true;
                 }
             }
     }
@@ -637,7 +642,6 @@ class SpeakFlowApp {
             } else {
                 this.isPlaying = false;
                 this.playBtn.disabled = false;
-                this.stopBtn.disabled = true;
             }
         };
         
@@ -647,7 +651,6 @@ class SpeakFlowApp {
             this.aiAudioLooping = false;
             this.isPlaying = false;
             this.playBtn.disabled = false;
-            this.stopBtn.disabled = true;
             this.updateStatus('播放错误', 'error');
         };
         
@@ -660,7 +663,6 @@ class SpeakFlowApp {
             this.aiAudioLooping = false;
             this.isPlaying = false;
             this.playBtn.disabled = false;
-            this.stopBtn.disabled = true;
         }
     }
     
@@ -724,54 +726,6 @@ class SpeakFlowApp {
         console.log('stopAll: 所有音频已停止');
     }
     
-    async stop() {
-        // 用户手动停止播放
-        console.log('用户点击停止按钮');
-        
-        // 立即更新UI状态，提供即时反馈
-        this.playBtn.disabled = false;
-        this.stopBtn.disabled = true;
-        this.updateStatus('正在停止...', 'loading');
-        
-        try {
-            // 停止所有正在播放的音频（包括后台播放）
-            await this.stopAll();
-            
-            // 再次确认状态（检查后台是否真的停止了）
-            await new Promise((resolve) => {
-                chrome.runtime.sendMessage({ type: 'getStatus' }, (response) => {
-                    if (response) {
-                        console.log('停止后状态检查:', response);
-                        if (response.isPlaying) {
-                            // 如果后台还在播放，再次尝试停止
-                            console.warn('后台仍在播放，再次尝试停止');
-                            this.stopAll().then(resolve);
-                        } else {
-                            resolve();
-                        }
-                    } else {
-                        resolve();
-                    }
-                });
-                setTimeout(resolve, 500); // 超时保护
-            });
-            
-            // 更新UI
-            this.isPlaying = false;
-            this.playBtn.disabled = false;
-            this.stopBtn.disabled = true;
-            this.updateStatus('已停止播放', 'success');
-            console.log('停止操作完成');
-        } catch (error) {
-            console.error('停止操作出错:', error);
-            this.updateStatus('停止时出错', 'error');
-            // 即使出错也更新UI状态
-            this.isPlaying = false;
-            this.playBtn.disabled = false;
-            this.stopBtn.disabled = true;
-        }
-    }
-
     updateStatus(message, type = '') {
         this.statusBar.textContent = message;
         this.statusBar.className = 'status-bar ' + type;
