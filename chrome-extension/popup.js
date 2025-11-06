@@ -63,6 +63,9 @@ class SpeakFlowApp {
         this.randomNewsEnBtn = document.getElementById('random-news-en-btn');
         this.randomWordJaBtn = document.getElementById('random-word-ja-btn');
         this.randomWordEnBtn = document.getElementById('random-word-en-btn');
+        this.randomShortTextBtn = document.getElementById('random-short-text-btn');
+        this.shortTextDifficultySelect = document.getElementById('short-text-difficulty');
+        this.shortTextScenarioInput = document.getElementById('short-text-scenario');
         this.statusBar = document.getElementById('status-bar');
         this.useAIVoiceCheckbox = document.getElementById('use-ai-voice');
         this.aiVoiceSettings = document.getElementById('ai-voice-settings');
@@ -159,6 +162,12 @@ class SpeakFlowApp {
         this.randomWordEnBtn.addEventListener('click', () => {
             this.generateRandomWordEnglish();
         });
+
+        if (this.randomShortTextBtn) {
+            this.randomShortTextBtn.addEventListener('click', () => {
+                this.generateRandomShortTextJapanese();
+            });
+        }
         
         // 当输入框内容变化时，检查是否需要更新翻译
         this.textInput.addEventListener('input', () => {
@@ -285,10 +294,28 @@ class SpeakFlowApp {
         
         // 显示假名注音（如果是日语）
         if (translationData.furigana) {
-            // 处理换行：将\n转换为<br>，同时保留已有的<br>标签
-            let furiganaHtml = translationData.furigana
-                .replace(/\n/g, '<br>')  // 将换行符转换为<br>标签
-                .replace(/<br><br>/g, '<br>');  // 避免重复的<br>
+            const normalizedText = translationData.furigana.replace(/\r\n/g, '\n');
+            const blocks = normalizedText.split(/\n{2,}/); // 双换行分块
+            const furiganaHtml = blocks.map((block) => {
+                const lines = block.split('\n');
+                const formattedLines = lines.map((line) => {
+                    const trimmedRight = line.replace(/\s+$/, '');
+                    if (!trimmedRight) {
+                        return '';
+                    }
+
+                    let content = trimmedRight.replace(/^\s+/, (match) => '&nbsp;'.repeat(match.length));
+                    content = content.replace(/^(\s*[(（【\[]?[A-Za-zＡ-Ｚぁ-んァ-ン一-龥]+[)：:\]]?)/, '<span class="furigana-speaker">$1</span>');
+                    return content;
+                }).filter(Boolean).join('<br>');
+
+                if (!formattedLines) {
+                    return '<div class="furigana-block empty-block">&nbsp;</div>';
+                }
+
+                return `<div class="furigana-block">${formattedLines}</div>`;
+            }).join('');
+
             this.furiganaText.innerHTML = furiganaHtml;
             this.furiganaSection.style.display = 'block';
         } else {
@@ -1299,6 +1326,124 @@ class SpeakFlowApp {
             this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
         } finally {
             this.randomWordEnBtn.disabled = false;
+        }
+    }
+    
+    // 随机生成日语短文（可调难度）
+    async generateRandomShortTextJapanese() {
+        console.log('生成随机日语短文');
+        
+        // 检查是否有API Key
+        const apiKey = await this.openaiTTS.getApiKey();
+        if (!apiKey) {
+            this.updateStatus('请先设置OpenAI API Key！', 'error');
+            // 滚动到AI语音设置区域
+            this.useAIVoiceCheckbox.checked = true;
+            this.useAIVoice = true;
+            this.aiVoiceSettings.style.display = 'block';
+            this.voiceSection.style.display = 'none';
+            this.languageSection.style.display = 'none';
+            this.aiVoiceSettings.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        this.updateStatus('正在生成日语短文...', 'loading');
+        if (this.randomShortTextBtn) {
+            this.randomShortTextBtn.disabled = true;
+        }
+        
+        const difficultyLevel = parseInt(this.shortTextDifficultySelect?.value, 10) || 5;
+        const scenario = (this.shortTextScenarioInput?.value || '').trim() || '日常生活对话';
+        
+        const difficultyDescriptions = {
+            1: '使用非常基础的词汇和短句，主要为N5级别的日常问候和简单陈述。',
+            2: '使用基础词汇和简单句型，围绕日常生活场景展开，适合N5学习者。',
+            3: '使用常用表达和稍长句子，描述简单经历或感受，适合N4学习者。',
+            4: '包含更多描述性词汇和常见语法，表达感受或观点，接近N4高阶水平。',
+            5: '使用N3级别的语法和词汇，能够描述经历并表达看法。',
+            6: '引入N3高阶及部分N2语法，可描述抽象概念或复杂情绪。',
+            7: '使用较复杂的语法结构和词汇，接近N2水平，表达逻辑清晰。',
+            8: '使用正式或书面语表达，包含敬语和复杂句型，接近N2高阶水平。',
+            9: '使用高级词汇和多样句型，包含比喻或细腻描写，接近N1水平。',
+            10: '使用自然流畅且多层次的表达，语言成熟细腻，达到日本母语者深度沟通水平。'
+        };
+        
+        const sentenceGuides = {
+            1: '请控制在4-6句话，句子简短，词汇基础。',
+            2: '请控制在4-6句话，句子简短，词汇基础。',
+            3: '请控制在5-7句话，使用简单复合句。',
+            4: '请控制在5-7句话，适当使用连接词。',
+            5: '请控制在6-8句话，使用N3级别语法。',
+            6: '请控制在6-8句话，表达具体情感或观点。',
+            7: '请控制在7-9句话，包含复杂句型和详尽描写。',
+            8: '请控制在8-10句话，表达逻辑清晰并使用敬语或正式表达。',
+            9: '请控制在8-12句话，包含高级词汇、比喻或细节描写。',
+            10: '请控制在8-12句话，语言自然流畅，层次分明，具有深度交流的感觉。'
+        };
+        
+        const difficultyInstruction = difficultyDescriptions[difficultyLevel] || difficultyDescriptions[5];
+        const sentenceInstruction = sentenceGuides[difficultyLevel] || sentenceGuides[5];
+        
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一名日语写作教练。请根据学习者的水平生成一段自然流畅的日语对话。必须满足以下要求：\n1. 语言应全部为日语，包含适量的汉字、平假名和片假名。\n2. 对话围绕指定的场景展开，由两位话者（例如「A」和「B」）轮流进行问答。\n3. 每轮对话中，先由一位提问，另一位回答，交替进行，至少包含4轮问答（共8句）以上，具体句数按照难度要求调整。\n4. 语气和词汇难度需要符合指定的等级要求，符合学习者的能力。\n5. 对话需自然、有情境，贴近真实生活交流，可包含轻微的情感或细节描写以增强真实感。\n6. 不要输出翻译、罗马音或额外说明，仅输出日语对话正文。'
+                        },
+                        {
+                            role: 'user',
+                            content: `请写一段日语对话。\n场景：${scenario}\n难度等级：${difficultyLevel}/10\n难度说明：${difficultyInstruction}\n长度要求：${sentenceInstruction}\n对话格式：使用「A: ……」「B: ……」的形式，按问答轮流输出，确保每轮先问后答。\n其他要求：内容贴近真实生活，语言自然，适合跟读练习。`
+                        }
+                    ],
+                    temperature: 0.85,
+                    max_tokens: 600
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const shortText = data.choices[0]?.message?.content?.trim();
+            
+            if (!shortText) {
+                throw new Error('生成的内容为空');
+            }
+            
+            console.log('日语短文生成成功:', shortText);
+            
+            // 设置为日语环境
+            this.languageSelect.value = 'ja-JP';
+            this.filterVoicesByLanguage();
+            
+            // 填充文本
+            this.textInput.value = shortText;
+            this.saveSettings();
+            
+            this.updateStatus('日语短文已生成！', 'success');
+            this.textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // 尝试翻译（如果使用AI语音）
+            this.translateText(shortText).catch((error) => {
+                console.warn('短文翻译失败（不影响播放）:', error);
+            });
+        } catch (error) {
+            console.error('生成日语短文失败:', error);
+            this.updateStatus('生成失败: ' + (error.message || '未知错误'), 'error');
+        } finally {
+            if (this.randomShortTextBtn) {
+                this.randomShortTextBtn.disabled = false;
+            }
         }
     }
     

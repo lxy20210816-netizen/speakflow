@@ -31,6 +31,30 @@
                 <button id="random-word-ja-btn" class="btn-random">📚 随机生成单词（日语）</button>
                 <button id="random-word-en-btn" class="btn-random">📚 随机生成单词（英语）</button>
             </div>
+            <div class="random-buttons-row">
+                <button id="random-short-text-btn" class="btn-random">📝 随机生成一段短文（日语）</button>
+            </div>
+            <div class="short-text-settings" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px;">
+                <div class="short-text-setting-item" style="display: flex; flex-direction: column; gap: 4px; min-width: 220px;">
+                    <label for="short-text-difficulty" style="font-size: 13px; color: #444;">难度（1=N5，10=母语水平）：</label>
+                    <select id="short-text-difficulty">
+                        <option value="1">1 - JLPT N5（基础问候）</option>
+                        <option value="2">2 - JLPT N5（日常生活）</option>
+                        <option value="3">3 - JLPT N4（简单描述）</option>
+                        <option value="4">4 - JLPT N4（常用表达）</option>
+                        <option value="5">5 - JLPT N3（基本会话）</option>
+                        <option value="6">6 - JLPT N3（描述感受）</option>
+                        <option value="7">7 - JLPT N2（复杂句型）</option>
+                        <option value="8">8 - JLPT N2（正式表达）</option>
+                        <option value="9">9 - JLPT N1（高级表达）</option>
+                        <option value="10" selected>10 - 母语级深度沟通</option>
+                    </select>
+                </div>
+                <div class="short-text-setting-item" style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 240px;">
+                    <label for="short-text-scenario" style="font-size: 13px; color: #444;">对话场景：</label>
+                    <input id="short-text-scenario" type="text" placeholder="例如：在咖啡店与朋友聊天" style="width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                </div>
+            </div>
         </div>
 
         <div class="status-bar" id="status-bar">
