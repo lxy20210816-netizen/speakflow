@@ -294,30 +294,13 @@ class SpeakFlowApp {
         
         // 显示假名注音（如果是日语）
         if (translationData.furigana) {
-            const normalizedText = translationData.furigana.replace(/\r\n/g, '\n');
-            const blocks = normalizedText.split(/\n{2,}/); // 双换行分块
-            const furiganaHtml = blocks.map((block) => {
-                const lines = block.split('\n');
-                const formattedLines = lines.map((line) => {
-                    const trimmedRight = line.replace(/\s+$/, '');
-                    if (!trimmedRight) {
-                        return '';
-                    }
-
-                    let content = trimmedRight.replace(/^\s+/, (match) => '&nbsp;'.repeat(match.length));
-                    content = content.replace(/^(\s*[(（【\[]?[A-Za-zＡ-Ｚぁ-んァ-ン一-龥]+[)：:\]]?)/, '<span class="furigana-speaker">$1</span>');
-                    return content;
-                }).filter(Boolean).join('<br>');
-
-                if (!formattedLines) {
-                    return '<div class="furigana-block empty-block">&nbsp;</div>';
-                }
-
-                return `<div class="furigana-block">${formattedLines}</div>`;
-            }).join('');
-
-            this.furiganaText.innerHTML = furiganaHtml;
-            this.furiganaSection.style.display = 'block';
+            const furiganaHtml = this.formatFuriganaHtml(translationData.furigana);
+            if (furiganaHtml) {
+                this.furiganaText.innerHTML = furiganaHtml;
+                this.furiganaSection.style.display = 'block';
+            } else {
+                this.furiganaSection.style.display = 'none';
+            }
         } else {
             this.furiganaSection.style.display = 'none';
         }
@@ -353,6 +336,122 @@ class SpeakFlowApp {
         } else {
             this.grammarSection.style.display = 'none';
         }
+    }
+
+    formatFuriganaHtml(rawFurigana) {
+        if (!rawFurigana) {
+            return '';
+        }
+
+        const normalizedText = rawFurigana
+            .replace(/\r\n/g, '\n')
+            .replace(/<br\s*\/?/gi, '\n');
+
+        const lines = normalizedText.split('\n');
+        const blocks = [];
+        let currentContent = '';
+
+        const pushCurrent = () => {
+            if (!currentContent) {
+                return;
+            }
+            const trimmed = currentContent.replace(/\s+$/, '');
+            if (trimmed) {
+                blocks.push(trimmed);
+            }
+            currentContent = '';
+        };
+
+        lines.forEach((line) => {
+            const trimmedRight = line.replace(/\s+$/, '');
+            const withoutTags = trimmedRight.replace(/<[^>]+>/g, '');
+            const hasNonSpaceChar = withoutTags.replace(/\s+/g, '') !== '';
+
+            if (!hasNonSpaceChar) {
+                if (withoutTags.length > 0) {
+                    currentContent += '&nbsp;'.repeat(withoutTags.length);
+                } else {
+                    pushCurrent();
+                    if (blocks.length === 0 || blocks[blocks.length - 1] !== null) {
+                        blocks.push(null);
+                    }
+                }
+                return;
+            }
+
+            const leadingPreserved = trimmedRight.replace(/^\s+/, (match) => '&nbsp;'.repeat(match.length));
+            currentContent += leadingPreserved;
+
+            const plainText = withoutTags;
+            if (/[。！？](?:[」』】》）］】]*)?$/.test(plainText)) {
+                pushCurrent();
+            }
+        });
+
+        pushCurrent();
+
+        while (blocks.length && blocks[0] === null) {
+            blocks.shift();
+        }
+        while (blocks.length && blocks[blocks.length - 1] === null) {
+            blocks.pop();
+        }
+
+        const html = blocks.map((block) => {
+            if (block === null) {
+                return '<div class="furigana-block empty-block">&nbsp;</div>';
+            }
+
+            let content = block.replace(/\s+$/g, '').replace(/&nbsp;{2,}/g, '&nbsp;');
+            if (!content) {
+                return '<div class="furigana-block empty-block">&nbsp;</div>';
+            }
+
+            content = content.replace(/^(\s*[(（【\[]?[A-Za-zＡ-Ｚぁ-んァ-ン一-龥]+[)：:\]]?)/, '<span class="furigana-speaker">$1</span>');
+
+            return `<div class="furigana-block">${content}</div>`;
+        }).join('');
+
+        const plainHtml = html
+            .replace(/<[^>]+>/g, '')
+            .replace(/\u00a0/g, '')
+            .trim();
+
+        if (plainHtml) {
+            return html;
+        }
+
+        return this.basicFuriganaHtml(rawFurigana);
+    }
+
+    basicFuriganaHtml(rawFurigana) {
+        if (!rawFurigana) {
+            return '';
+        }
+
+        const normalizedText = rawFurigana
+            .replace(/\r\n/g, '\n')
+            .replace(/<br\s*\/?/gi, '\n');
+
+        const blocks = normalizedText.split(/\n{2,}/);
+
+        return blocks.map((block) => {
+            const lines = block.split('\n').map((line) => {
+                const trimmed = line.replace(/\s+$/, '');
+                if (!trimmed) {
+                    return '&nbsp;';
+                }
+                return trimmed.replace(/^\s+/, (match) => '&nbsp;'.repeat(match.length));
+            });
+
+            const content = lines.join('<br>').replace(/(<br>)+$/, '');
+
+            if (!content.replace(/<[^>]+>/g, '').replace(/\u00a0/g, '').trim()) {
+                return '<div class="furigana-block empty-block">&nbsp;</div>';
+            }
+
+            return `<div class="furigana-block">${content}</div>`;
+        }).join('');
     }
     
     loadAIVoices() {
@@ -1508,12 +1607,13 @@ class SpeakFlowApp {
             
             // 显示假名注音（如果是日语）
             if (result.furigana) {
-                // 处理换行：将\n转换为<br>，同时保留已有的<br>标签
-                let furiganaHtml = result.furigana
-                    .replace(/\n/g, '<br>')  // 将换行符转换为<br>标签
-                    .replace(/<br><br>/g, '<br>');  // 避免重复的<br>
-                this.furiganaText.innerHTML = furiganaHtml;
-                this.furiganaSection.style.display = 'block';
+                const furiganaHtml = this.formatFuriganaHtml(result.furigana);
+                if (furiganaHtml) {
+                    this.furiganaText.innerHTML = furiganaHtml;
+                    this.furiganaSection.style.display = 'block';
+                } else {
+                    this.furiganaSection.style.display = 'none';
+                }
             } else {
                 this.furiganaSection.style.display = 'none';
             }
